@@ -383,6 +383,7 @@ function drawMap(bx, by, bw, bh, scale) {
     if ((dungeon || rift) && !(seen[ty] && seen[ty][tx])) continue;
     dot(e.x + e.w / 2, e.y + e.h / 2, e.d.boss ? '#ff40ff' : '#ff4040', e.d.boss ? scale + 3 : Math.max(1, scale));
   }
+  if (inWorld() && typeof bots !== 'undefined') for (const b of bots) if (botAlive(b)) dot(b.x + 6, b.y + 6, '#60e0ff', Math.max(2, scale));
   if (inWorld()) for (const n of NPCS) { const mk = npcMark(n); dot(n.x + 6, n.y + 6, mk && mk[1] === '#f8c838' ? '#f8f848' : '#c0a040', Math.max(2, scale)); }
   if (frame % 40 < 30) dot(p.x + 6, p.y + 6, '#ffffff', Math.max(2, scale + 1));
   ctx.restore();

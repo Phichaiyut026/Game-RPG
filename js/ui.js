@@ -391,6 +391,7 @@ function press(code) {
       else if (code === 'KeyQ') drinkPotion();
       else if (code === 'KeyC' || code === 'Digit3') useQuickItem();
       else if (code === 'KeyV') cyclePet();
+      else if (code === 'KeyG') toggleAuto();
       else if (code === 'KeyB') { mode = 'bestiary'; bestCur = 0; sfx('menu'); }
       else if (code === 'KeyY') { mode = 'achieve'; achieveCur = 0; sfx('menu'); }
       else if (code === 'KeyT') { mode = 'tree'; skillTab = 'skills'; sfx('menu'); }
@@ -627,6 +628,7 @@ function drawWorld() {
   const actors = enemies.filter(e => e.x + e.w > cx - 32 && e.x < cx + VW + 32 && e.y + e.h > cy - 32 && e.y < cy + VH + 32);
   if (inWorld()) actors.push(...NPCS);
   const onTitle = !p || mode === 'title' || mode === 'class' || (mode === 'settings' && setFrom === 'title');
+  if (inWorld() && !onTitle) actors.push(...bots.filter(b => botAlive(b) && b.x > cx - 32 && b.x < cx + VW + 32 && b.y > cy - 40 && b.y < cy + VH + 32));
   if (!onTitle && mode !== 'dead') actors.push(p);
   actors.sort((a, b) => (a.y + a.h) - (b.y + b.h));
   const shadow = (x, y, w) => {
@@ -645,6 +647,8 @@ function drawWorld() {
         const mk = npcMark(a);
         if (mk) text(mk[0], mx, my + Math.round(Math.sin(frame * 0.1) * 2), mk[1], 'center');
       }
+    } else if (a.bot) {
+      drawBot(a, cx, cy);
     } else if (a === p) {
       if (p.hurtT > 0 && Math.floor(p.hurtT / 4) % 2) continue;
       const f = Math.floor(p.anim / 10) % 2, look = HEROES[p.cls];
@@ -660,6 +664,15 @@ function drawWorld() {
         ctx.globalAlpha = 0.35;
         drawSprite((p.dir === 'up' ? look.up : look.down)[f], sx - p.rollVx * 1.5, sy - p.rollVy * 1.5, p.dir === 'left');
         ctx.globalAlpha = 1;
+      }
+      if (warp) {                                          // spinning / shrinking into the portal
+        const s = warpScale();
+        if (s > 0.05) {
+          const img = look.down[0];
+          ctx.save(); ctx.translate(Math.round(p.x + 6 - cx), Math.round(p.y + 4 - cy)); ctx.rotate(warp.t * 0.35); ctx.scale(s, s);
+          ctx.drawImage(img, -img.width / 2, -img.height / 2); ctx.restore();
+        }
+        continue;
       }
       const held = swinging ? null : heldPose();
       if (held && held.behind) drawWeapon(held.kind, sx + held.hx, sy + held.hy, held.ang, held.sheathed);
@@ -691,7 +704,8 @@ function drawWorld() {
       }
       if (e.enraged) { ctx.fillStyle = 'rgba(255,50,30,.24)'; ctx.fillRect(Math.round(e.x - 4 - cx), Math.round(e.y - 8 - cy), e.w + 8, e.h + 8); }
       if (e.slam > 0) {
-        const ice = e.type === 'frostwyrm', fire = e.type === 'infernal', maxT = ice ? 50 : fire ? 48 : 45, rad = ice ? 62 : fire ? 60 : 52;
+        const ice = e.type === 'frostwyrm', fire = e.type === 'infernal', titan = e.type === 'titan';
+        const maxT = titan ? 60 : ice ? 50 : fire ? 48 : 45, rad = titan ? 76 : ice ? 62 : fire ? 60 : 52;
         ctx.strokeStyle = `rgba(${ice ? '80,220,255' : fire ? '255,140,30' : '255,60,60'},${0.3 + (1 - e.slam / maxT) * 0.6})`; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy, rad * (1 - e.slam / (maxT + 15)), 0, 6.28); ctx.stroke();
       }
@@ -730,6 +744,7 @@ function drawWorld() {
     ctx.globalAlpha = Math.min(1, r.t / 12); ctx.strokeStyle = r.c; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(r.x - cx, r.y - cy, r.r, 0, 6.28); ctx.stroke(); ctx.globalAlpha = 1;
   }
+  if (inWorld()) drawBotShots(cx, cy);
   for (const q of eprojs) {
     const x = Math.round(q.x - cx), y = Math.round(q.y - cy);
     ctx.fillStyle = q.c; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, y - 1, 2, 2);
@@ -750,6 +765,7 @@ function drawWorld() {
   if (inWorld()) drawDayNight(cx, cy);
   const gloom = !inWorld() ? 0 : clamp((camx + VW / 2 - 46 * T) / (24 * T), 0, 1) * 0.3;
   if (gloom > 0) { ctx.fillStyle = `rgba(16,0,40,${gloom})`; ctx.fillRect(0, 0, VW, VH); }
+  drawWarp(cx, cy);
 }
 
 // crypt darkness: a black layer with soft holes cut around the player, torches and projectiles
@@ -823,7 +839,14 @@ function drawDayNight(cx, cy) {
     ctx.fillRect(0, 0, VW, VH);
   }
   if (st.night > 0) {
-    // fireflies in Meadow & Dark Forest at night
+    // moonlight: multiply the whole view by a cool blue so it gets darker and bluer evenly,
+    // but every tile, monster and path stays readable (no spotlight circles)
+    const k = st.night / 0.85, mix = c => Math.round(255 + (c - 255) * k);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = `rgb(${mix(110)},${mix(124)},${mix(190)})`;
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.globalCompositeOperation = 'source-over';
+    // fireflies in Meadow & Dark Forest at night (drawn after the tint so they glow)
     ctx.fillStyle = '#d8ff70';
     for (let i = 0; i < 22; i++) {
       if ((frame + i * 19) % 44 < 14) continue;
@@ -831,21 +854,6 @@ function drawDayNight(cx, cy) {
       const fy = ((i * 59 + Math.cos(frame * 0.025 + i * 2) * 10 - cy * 0.7) % VH + VH) % VH;
       ctx.fillRect(Math.round(fx), Math.round(fy), 2, 2);
     }
-    dg.globalCompositeOperation = 'source-over';
-    dg.fillStyle = `rgba(8,12,34,${(st.night * 0.58).toFixed(3)})`;
-    dg.fillRect(0, 0, VW, VH);
-    dg.globalCompositeOperation = 'destination-out';
-    const hole = (x, y, r) => {
-      if (x < -r || y < -r || x > VW + r || y > VH + r) return;
-      const g = dg.createRadialGradient(x, y, r * 0.2, x, y, r);
-      g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-      dg.fillStyle = g; dg.fillRect(x - r, y - r, r * 2, r * 2);
-    };
-    if (p) hole(p.x + 6 - cx, p.y + 6 - cy, 85);
-    hole(12.5 * T - cx, 24 * T - cy, 95);
-    for (const n of NPCS) hole(n.x + 6 - cx, n.y + 6 - cy, 60);
-    for (const q of projs) hole(q.x - cx, q.y - cy, 26);
-    ctx.drawImage(darkC, 0, 0);
   }
 }
 // ---- Weapons in hand ----
@@ -860,15 +868,20 @@ function heldPose() {
     if (wasSheathed !== null) { sfx(sheathed ? 'sheathe' : 'unsheathe'); burst(p.x + 6, p.y + 8, sheathed ? '#c0c0d0' : '#fff6c0', 6); }
     wasSheathed = sheathed;
   }
+  const moving = keys.ArrowLeft || keys.ArrowRight || keys.ArrowUp || keys.ArrowDown || keys.KeyA || keys.KeyD || keys.KeyW || keys.KeyS;
+  const sway = moving ? Math.sin(p.anim * 0.3) * 0.12 : Math.sin(frame * 0.05) * 0.04;   // weapon sways with the steps
   if (sheathed) {
-    if (kind === 'sword') return { kind, sheathed, behind: d === 'up', hx: d === 'left' ? 12 : 4, hy: 12, ang: d === 'left' ? 1.2 : 1.95 };
+    // scabbard on the hip, hilt forward, angled down and back
+    if (kind === 'sword') return { kind, sheathed, behind: d === 'up', hx: d === 'left' ? 11 : 5, hy: 12, ang: (d === 'left' ? 1.35 : 1.8) + sway * 0.5 };
     return { kind, sheathed, behind: d !== 'up', hx: d === 'left' ? 11 : 5, hy: 9, ang: kind === 'bow' ? Math.PI : -0.9 };   // on the back
   }
   const aiming = p.atkT > 0 && p.aimA !== undefined && kind !== 'sword';
-  const hand = { down: [14, 11], right: [13, 11], left: [2, 11], up: [2, 10] }[d];
+  const hand = kind === 'sword' ? { down: [13, 12], right: [12, 12], left: [3, 12], up: [3, 11] }[d]
+    : { down: [14, 11], right: [13, 11], left: [2, 11], up: [2, 10] }[d];
   let ang;
   if (aiming) ang = p.aimA;
-  else if (kind === 'sword') ang = { down: -1.25, right: -0.6, left: -2.54, up: -1.9 }[d];
+  // sword: ready stance, blade pointing forward and a little down, beside the body
+  else if (kind === 'sword') ang = { down: 1.1, right: 0.45, left: Math.PI - 0.45, up: -2.2 }[d] + sway;
   else if (kind === 'staff') ang = d === 'left' ? -1.75 : -1.4;
   else ang = DIR_ANG[d] + (kind === 'gun' ? 0 : 0.35);
   const kick = kind === 'gun' && p.atkT > 0 ? -1.5 : 0;               // recoil
@@ -885,11 +898,19 @@ function drawWeapon(kind, x, y, ang, sheathed) {
     ctx.globalAlpha = 1;
   }
   if (kind === 'sword') {
-    ctx.fillStyle = '#000'; ctx.fillRect(-5, -2, 18, 5);               // outline
-    ctx.fillStyle = '#7a4a1c'; ctx.fillRect(-4, -1, 4, 3);              // grip
-    ctx.fillStyle = '#f8c838'; ctx.fillRect(-5, -1, 1, 3); ctx.fillRect(0, -3, 2, 7);   // pommel + guard
-    if (sheathed) { ctx.fillStyle = '#4a2a12'; ctx.fillRect(2, -1, 10, 3); ctx.fillStyle = '#f8c838'; ctx.fillRect(11, -1, 2, 3); }
-    else { ctx.fillStyle = rc; ctx.fillRect(2, -1, 10, 3); ctx.fillRect(12, 0, 1, 1); ctx.fillStyle = '#fff'; ctx.fillRect(2, -1, 10, 1); }
+    // compact sword sized to the 16px hero: pommel, 2px grip, 5px guard, 8px blade with a tapered tip
+    ctx.fillStyle = '#000'; ctx.fillRect(-4, -2, 6, 4); ctx.fillRect(0, -3, 3, 6); ctx.fillRect(2, -2, 9, 4); ctx.fillRect(11, -1, 2, 2);
+    ctx.fillStyle = '#f8c838'; ctx.fillRect(-3, -1, 1, 2);              // pommel
+    ctx.fillStyle = '#7a4a1c'; ctx.fillRect(-2, -1, 2, 2);              // grip
+    ctx.fillStyle = '#f8c838'; ctx.fillRect(1, -2, 1, 4);               // guard
+    if (sheathed) {
+      ctx.fillStyle = '#5a3418'; ctx.fillRect(2, -1, 9, 2);             // scabbard
+      ctx.fillStyle = '#8a5a2a'; ctx.fillRect(2, -1, 9, 1);
+      ctx.fillStyle = '#f8c838'; ctx.fillRect(10, -1, 1, 2);            // chape
+    } else {
+      ctx.fillStyle = rc; ctx.fillRect(2, -1, 9, 2); ctx.fillRect(11, -1, 1, 1);   // blade + tip
+      ctx.fillStyle = '#fff'; ctx.fillRect(3, -1, 7, 1);                // edge shine
+    }
   } else if (kind === 'staff') {
     ctx.fillStyle = '#000'; ctx.fillRect(-6, -2, 20, 4);
     ctx.fillStyle = '#8a5a2a'; ctx.fillRect(-5, -1, 15, 2);
@@ -929,7 +950,7 @@ function drawSwing(cx, cy, t, spin) {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
-  drawWeapon('sword', ox + Math.cos(a1) * 6, oy + Math.sin(a1) * 6, a1, false);
+  drawWeapon('sword', ox + Math.cos(a1) * 9, oy + Math.sin(a1) * 9, a1, false);   // blade tip rides the trail
 }
 function drawHud() {
   // player frame: portrait, level, HP / MP / XP
@@ -1432,6 +1453,7 @@ function draw() {
   if ((mode === 'settings' || mode === 'help') && setFrom === 'title' && (mode === 'settings' || helpReturn === 'settings')) return inMenuBox(drawSettings);
   if (mode === 'title' || mode === 'class') { shade(mode === 'title' ? 'rgba(8,8,24,0.6)' : 'rgba(8,8,24,0.75)'); return inMenuBox(() => drawTitle(blink)); }
   drawHud();
+  drawRaidHud();
   if (mode === 'dialog') inMenuBox(() => drawDialog(blink), VH - 240);      // dialog box hugs the bottom edge
   else if (mode === 'bag') inMenuBox(() => drawBag(false));
   else if (mode === 'sell') inMenuBox(() => drawBag(true));

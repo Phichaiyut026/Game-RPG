@@ -114,6 +114,61 @@ function leaveRegion() {
   p.x = regionReturn.x; p.y = regionReturn.y; p.stairCD = 40; p.target = null;
   zoneName = zoneAt(p.x); banner = { txt: zoneName, t: 150 }; sfx('stairs');
 }
+// ---- Warp transition ----
+// Stepping on a portal plays a short warp: the hero spins and shrinks into a swirling vortex that
+// closes over the screen, the travel happens at the midpoint (under a flash), then it opens again.
+const WARP_LEN = 70, WARP_MID = 35;
+let warp = null;
+function startWarp(travel) {
+  if (warp) return;
+  warp = { t: 0, travel, x: p.x + 6, y: p.y + 6 };
+  sfx('warpOut');
+}
+// advanced from update(); the world is frozen while it runs
+function tickWarp() {
+  warp.t++;
+  const k = warp.t / WARP_MID;
+  if (warp.t < WARP_MID && warp.t % 2 === 0)                          // particles spiral into the hero
+    for (let i = 0; i < 3; i++) {
+      const a = R() * 6.28, r = 26 + R() * 20;
+      parts.push({ x: warp.x + Math.cos(a) * r, y: warp.y + Math.sin(a) * r, vx: -Math.cos(a - 0.9) * 2.4, vy: -Math.sin(a - 0.9) * 2.4, t: 14, c: i ? '#c080ff' : '#80f0ff' });
+    }
+  if (warp.t === WARP_MID) {
+    warp.travel();
+    warp.x = p.x + 6; warp.y = p.y + 6;
+    camx = clamp(p.x + 6 - VW / 2, 0, Math.max(0, MW * T - VW)); camy = clamp(p.y + 6 - VH / 2, 0, Math.max(0, MH * T - VH));
+    sfx('warpIn');
+  }
+  if (warp.t > WARP_MID && warp.t < WARP_MID + 14) burst(warp.x, warp.y, warp.t % 2 ? '#fff6c0' : '#c080ff', 2);
+  if (warp.t >= WARP_LEN) { warp = null; p.stairCD = 40; }
+  return k;
+}
+// hero size / spin during the warp (1 = normal)
+function warpScale() {
+  if (!warp) return 1;
+  return warp.t < WARP_MID ? Math.max(0, 1 - warp.t / WARP_MID) : Math.min(1, (warp.t - WARP_MID) / 20);
+}
+function drawWarp(cx, cy) {
+  if (!warp) return;
+  const t = warp.t, x = warp.x - cx, y = warp.y - cy, big = Math.hypot(VW, VH);
+  // vortex closes (out) and opens (in)
+  const close = t < WARP_MID ? clamp((t - 12) / (WARP_MID - 12), 0, 1) : 1 - clamp((t - WARP_MID) / (WARP_LEN - WARP_MID - 8), 0, 1);
+  const r = (1 - close) * big;
+  ctx.save();
+  ctx.fillStyle = '#120820';
+  ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2); ctx.fill('evenodd');
+  // spiral arms along the vortex edge
+  if (close > 0.02) for (let i = 0; i < 48; i++) {
+    const a = i / 48 * Math.PI * 2 + frame * 0.18 + (i % 2) * 0.4, rr = r + 4 + (i % 3) * 5 + Math.sin(frame * 0.3 + i) * 2;
+    ctx.fillStyle = i % 3 === 0 ? '#80f0ff' : i % 3 === 1 ? '#c080ff' : '#ffffff';
+    ctx.fillRect(Math.round(x + Math.cos(a) * rr), Math.round(y + Math.sin(a) * rr), 2, 2);
+  }
+  // white flash at the moment of travel
+  const flash = 1 - Math.min(1, Math.abs(t - WARP_MID) / 6);
+  if (flash > 0) { ctx.globalAlpha = flash; ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, VW, VH); }
+  ctx.restore();
+}
+
 // called when the player steps on a portal tile
 function usePortal(tx, ty) {
   if (region) return leaveRegion();

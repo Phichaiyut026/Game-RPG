@@ -59,7 +59,7 @@ function mkEnemy(type, x, y, zone, scale = 1, forceElite = false) {
 }
 
 function fireEnemy(e, ux, uy) {
-  const ex = e.x + e.w / 2, ey = e.y + e.h / 2, shot = (a, s) => eprojs.push({ x: ex, y: ey, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 160, atk: e.d.atk, c: e.d.shotColor || (e.type === 'lich' ? '#60ff90' : '#c040ff') });
+  const ex = e.x + e.w / 2, ey = e.y + e.h / 2, shot = (a, s) => eprojs.push({ x: ex, y: ey, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 160, atk: e.d.atk * (e.d.boss ? BOSS_DMG : 1), c: e.d.shotColor || (e.type === 'lich' ? '#60ff90' : '#c040ff') });
   const a = Math.atan2(uy, ux);
   if (e.type === 'lich' || e.d.pattern === 'nova') {
     if (++e.phase % 3 === 0) for (let i = 0; i < 10; i++) shot(i / 10 * Math.PI * 2, 1.6);
@@ -93,7 +93,7 @@ function populate() {
   bossCD = 0;
 }
 function startGame(fromSave, cls) {
-  dungeon = 0; arena = 0; arenaWait = 0; rift = 0; riftMod = null; region = null; map = world; MW = WW; MH = WH; worldState = null; torches = []; eprojs = [];
+  dungeon = 0; arena = 0; arenaWait = 0; rift = 0; riftMod = null; region = null; warp = null; map = world; MW = WW; MH = WH; worldState = null; torches = []; eprojs = [];
   p = freshPlayer(fromSave && saved ? saved.cls || 'knight' : cls);
   if (fromSave && saved) Object.assign(p, saved, { cls: saved.cls || 'knight' });
   p.stash = p.stash || []; p.kills = p.kills || {}; p.quickId = p.quickId || 'mpot';
@@ -107,6 +107,7 @@ function startGame(fromSave, cls) {
   world[4][63] = p.akFound ? ',' : 'K'; miniFor = null;           // the secret chest only opens once per save
   p.hp = Math.min(p.hp, maxHp()); p.mp = Math.min(p.mp ?? 999, maxMp());
   populate(); floats = []; parts = []; msgs = []; projs = []; rings = [];
+  initBots();
   zoneName = zoneAt(p.x); banner = { txt: zoneName, t: 150 };
   checkAchievements();
   if (fromSave) mode = 'play';
@@ -442,6 +443,7 @@ function killEnemy(e) {
     drop(cx, cy, { kind:'gear', item: rollGear(d.tier, e.type === 'lich' ? 3 : 2) });
     drop(cx, cy, { kind:'use', id:'elixir' });
     msg(`The ${d.name} has fallen!`, '#f8c838');
+    if (e.type === 'titan') onTitanKilled(e);
     if (e.type === 'orc' && inWorld()) bossCD = 3 * 60 * 60;
     else if (dungeon) msg('Take the stairs back up to the surface.', '#c0a0ff');
     if (region) onRegionBossKilled(e);
@@ -460,7 +462,8 @@ function gainXp(n) {
 }
 function hurtPlayer(e, mult = 1) {
   const rMul = (typeof rift !== 'undefined' && rift && riftMod && riftMod.foeAtk) ? riftMod.foeAtk : 1;
-  const dmg = Math.max(1, Math.round(e.d.atk * mult * rMul * DIFF().dmg * (0.85 + R() * 0.3)) - def());
+  const bossMul = e.d.boss ? BOSS_DMG : 1;               // bosses hit harder (bots.js)
+  const dmg = Math.max(1, Math.round(e.d.atk * mult * rMul * bossMul * DIFF().dmg * (0.85 + R() * 0.3)) - def());
   p.hp -= dmg; p.hurtT = 50; addShake(4);
   const dx = p.x - e.x - (e.w - p.w) / 2, dy = p.y - e.y - (e.h - p.h) / 2, l = Math.hypot(dx, dy) || 1;
   p.kx = dx / l * 3; p.ky = dy / l * 3;
@@ -482,6 +485,7 @@ function respawn() {
   if (arena) leaveArena();
   if (region) leaveRegion();
   p.x = 12 * T + 2; p.y = 24 * T + 2; p.hp = maxHp(); p.hurtT = 60; p.kx = p.ky = 0;
+  p.auto = false;                                     // don't let auto farm walk straight back into what killed you
   mode = 'play'; save(); startMusic();
 }
 function drinkPotion() {
@@ -524,6 +528,9 @@ function updatePlayer() {
   if (keys.ArrowRight || keys.KeyD) dx++;
   if (keys.ArrowUp || keys.KeyW) dy--;
   if (keys.ArrowDown || keys.KeyS) dy++;
+  // auto farm (G): the pilot steers whenever no movement key is held
+  const manual = dx || dy;
+  if (p.auto && !manual) { const ap = autoPilot(); dx = ap.dx; dy = ap.dy; }
   if (p.rollCd > 0) p.rollCd--;
   if (p.comboT > 0) p.comboT--;
   if (p.slowT > 0) p.slowT--;
@@ -556,10 +563,10 @@ function updatePlayer() {
   if (p.buffT > 0 && --p.buffT % 6 === 0) parts.push({ x: p.x + ri(0, 12), y: p.y + 10, vx: 0, vy: -0.8, t: 18, c: '#ff9040' });
   const inVillage = inWorld() && p.x < 26 * T;
   if (p.stairCD > 0) p.stairCD--;
-  else {
+  else if (!p.auto || manual) {                       // auto farm never wanders through portals or stairs
     const ch = map[Math.floor((p.y + 6) / T)][Math.floor((p.x + 6) / T)];
-    if (ch === 'V') return enterRift(1);
-    if (ch === 'Z') return usePortal(Math.floor((p.x + 6) / T), Math.floor((p.y + 6) / T));
+    if (ch === 'V') return startWarp(() => enterRift(1));
+    if (ch === 'Z') { const tx = Math.floor((p.x + 6) / T), ty = Math.floor((p.y + 6) / T); return startWarp(() => usePortal(tx, ty)); }
     if (ch === 'E') return enterDungeon(1);
     if (ch === '>') return (typeof rift !== 'undefined' && rift) ? enterRift(rift + 1) : enterDungeon(dungeon + 1);
     if (ch === '<') {
@@ -576,15 +583,18 @@ function updateEnemies() {
   const pcx = p.x + 6, pcy = p.y + 6;
   for (const e of enemies) {
     if (e.dead) continue;
-    if (Math.abs(e.x - p.x) > VW + 64 || Math.abs(e.y - p.y) > VH + 64) continue;   // sleep when far away
+    if (!e.d.world && (Math.abs(e.x - p.x) > VW + 64 || Math.abs(e.y - p.y) > VH + 64)) continue;   // sleep when far away (world boss never sleeps)
     if (e.flash > 0) e.flash--;
     if (e.d.dummy) { if (e.stun > 0) e.stun--; continue; }
     if (e.frozen > 0) { e.frozen--; continue; }
     e.anim++;
     if (e.stun > 0) { e.stun--; move(e, e.kx, 0, true); move(e, 0, e.ky, true); e.kx *= 0.8; e.ky *= 0.8; continue; }
-    const ex = e.x + e.w / 2, ey = e.y + e.h / 2, dx = pcx - ex, dy = pcy - ey, d = Math.hypot(dx, dy) || 1;
+    const ex = e.x + e.w / 2, ey = e.y + e.h / 2;
+    // chase whichever hero is closest: the player or a bot (bots.js)
+    const tg = enemyTarget(e, ex, ey), dx = tg.x - ex, dy = tg.y - ey, d = Math.hypot(dx, dy) || 1;
     let vx = 0, vy = 0;
-    if (e.type === 'orc') {
+    if (e.type === 'titan') { if (titanAI(e, ex, ey)) { if (mode !== 'play') return; continue; } }
+    else if (e.type === 'orc') {
       if (e.hp < e.d.hp * 0.5 && !e.enraged) {
         e.enraged = true; float(ex, e.y - 10, 'ENRAGED!', '#ff4040');
         rings.push({ x: ex, y: ey, r: 4, max: 48, c: '#ff4040', t: 20 }); sfx('cry'); addShake(4);
@@ -640,7 +650,7 @@ function updateEnemies() {
     }
     const rfSpd = (typeof rift !== 'undefined' && rift && riftMod && riftMod.foeSpd) ? riftMod.foeSpd : 1;
     const spd = e.d.spd * (e.enraged ? 1.25 : 1) * rfSpd;
-    const engaged = (arena || (typeof rift !== 'undefined' && rift) || d < e.d.aggro) && (dungeon || region || arena || (typeof rift !== 'undefined' && rift) || p.x > 26 * T - 8);
+    const engaged = (arena || (typeof rift !== 'undefined' && rift) || d < e.d.aggro) && (dungeon || region || arena || (typeof rift !== 'undefined' && rift) || (tg.bot ? tg.bot.x : p.x) > 26 * T - 8);
     if (engaged && e.d.ranged) {                     // casters keep their distance and shoot
       if (--e.shootCD <= 0) fireEnemy(e, dx / d, dy / d);
       const want = e.d.boss ? 80 : 100, s = d < want - 20 ? -1 : d > want + 20 ? 1 : 0;
@@ -653,6 +663,7 @@ function updateEnemies() {
     move(e, vx, 0, true); move(e, 0, vy, true);
     if (Math.abs(vx) > 0.05) e.face = Math.sign(vx);
     if (p.hurtT <= 0 && overlap(e, p)) hurtPlayer(e);
+    if (tg.bot && overlap(e, tg.bot)) hurtBot(tg.bot, e);
     if (mode !== 'play') return;
   }
   enemies = enemies.filter(e => !e.dead);
@@ -773,7 +784,7 @@ function spawner() {
     }
   }
   if (bossCD > 0) bossCD--;
-  else if (!enemies.some(e => e.d.boss)) { enemies.push(mkEnemy('orc', 80 * T - 4, 24 * T, 'Old Ruins')); bossCD = 1e9; }
+  else if (!enemies.some(e => e.type === 'orc')) { enemies.push(mkEnemy('orc', 80 * T - 4, 24 * T, 'Old Ruins')); bossCD = 1e9; }
 }
 
 function update() {
@@ -788,10 +799,12 @@ function update() {
     return;
   }
   if (mode !== 'play') return;
+  if (warp) { tickWarp(); return; }                       // the world holds still while a portal warp plays
   for (const m of msgs) m.t--; msgs = msgs.filter(m => m.t > 0);
   if (banner && --banner.t <= 0) banner = null;
   updatePlayer();
   updatePet();
+  updateBots();
   updateEnemies();
   if (mode !== 'play') return;
   updateProjs();

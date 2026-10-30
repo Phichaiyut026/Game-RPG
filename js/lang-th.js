@@ -63,7 +63,15 @@ const goalTH = g => g
   .replace(/^Bring (\d+) (.+)s$/, (_, n, m) => `นำ${trName(m)}มา ${n} ชิ้น`)
   .replace(/^Visit the (.+)$/, (_, m) => `ไปสำรวจ${trName(m)}`);
 
+TH_NAMES['Ancient Titan'] = TH_NAMES['ANCIENT TITAN'] = 'ไททันโบราณ';
+TH_NAMES['Titan Core'] = TH_NAMES['TITAN CORE'] = 'แกนไททัน';
 TH = {
+  // auto farm, bots & world boss (bots.js)
+  'AUTO':'ออโต้', 'AUTO FARM: ON':'ออโต้ฟาร์ม: เปิด', 'AUTO FARM: OFF':'ออโต้ฟาร์ม: ปิด',
+  'WORLD BOSS!':'บอสโลก!', 'WORLD BOSS DEFEATED!':'ปราบบอสโลกสำเร็จ!',
+  'The Ancient Titan has awakened in the Meadow! Gather a party!':'ไททันโบราณตื่นขึ้นที่ทุ่งหญ้า! รวมปาร์ตี้ไปตีกัน!',
+  'The Titan regenerates! Bring more heroes!':'ไททันฟื้นพลัง! ต้องมีคนช่วยตีมากกว่านี้!',
+  'WORLD BOSS ACTIVE: Meadow':'บอสโลกปรากฏที่ทุ่งหญ้า!',
   // title / class select / settings
   'A PIXEL LOOT RPG':'เกม RPG ล่ามอนฟาร์มของ', 'ENTER: CONTINUE':'ENTER: เล่นต่อ', 'N: NEW GAME':'N: เริ่มเกมใหม่',
   'PRESS ENTER':'กด ENTER เพื่อเริ่ม', 'O: SETTINGS':'O: ตั้งค่า', 'CHOOSE YOUR CLASS':'เลือกอาชีพ', '< >  ENTER: CHOOSE':'< >  ENTER: เลือก',
@@ -227,6 +235,8 @@ TH = {
 };
 
 TH_RX = [
+  [/^RAIDERS (\d+)\/(\d+)$/, 'ผู้ร่วมตี $1/$2'],
+  [/^(.+) was knocked out!$/, '$1 ถูกน็อก!'],
   // HUD / screens
   [/^\+(\d+) SKILL PT \[T\]$/, '+$1 แต้มสกิล [T]'],
   [/^Hunt (.+) (\d+)\/(\d+)$/, (_, m, a, b) => `ล่า${trName(m)} ${a}/${b}`],
