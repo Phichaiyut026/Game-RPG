@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Ironvale</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="320" height="240"></canvas>
+  <!-- all in-game text is drawn on this 3x layer so Thai and the pixel font both stay sharp -->
+  <canvas id="ui" width="960" height="720"></canvas>
+  <div id="help"><div class="card">
+    <h1>HOW TO PLAY</h1>
+    <h2>CONTROLS</h2>
+    <div class="keys l-th">
+      <span><kbd>←↑↓→</kbd> <kbd>WASD</kbd></span><span>เดิน · <kbd>SHIFT</kbd> กลิ้งหลบ</span>
+      <span><kbd>SPACE</kbd> <kbd>J</kbd></span><span>โจมตี (กดค้างได้ · อัศวินฟันคอมโบ 3 จังหวะ) · ล็อกเป้าศัตรูอัตโนมัติ</span>
+      <span><kbd>K</kbd> <kbd>L</kbd></span><span>สกิล 1 (ปลดล็อก LV2) / สกิล 2 (ปลดล็อก LV5)</span>
+      <span><kbd>T</kbd></span><span>หน้าสกิล: อัปเลเวลสกิล และต้นไม้สกิล (<kbd>TAB</kbd> สลับหน้า)</span>
+      <span><kbd>E</kbd></span><span>คุยกับ NPC · ซื้อขาย · เปิดหีบสมบัติ</span>
+      <span><kbd>I</kbd> <kbd>Q</kbd> <kbd>C</kbd> <kbd>V</kbd></span><span>กระเป๋า · <kbd>Q</kbd> ยา HP · <kbd>C</kbd> ไอเทมด่วน · <kbd>V</kbd> สลับสัตว์เลี้ยงคู่หู</span>
+      <span><kbd>N</kbd> <kbd>B</kbd> <kbd>Y</kbd></span><span>แผนที่ใหญ่ · <kbd>B</kbd> สมุดภาพมอนสเตอร์ · <kbd>Y</kbd> ความสำเร็จและฉายาลับ (เพิ่มสเตตัส)</span>
+      <span><kbd>ESC</kbd> <kbd>O</kbd></span><span>ตั้งค่า: เพลง · เสียง · ภาษา · ความยาก</span>
+      <span><kbd>H</kbd> <kbd>M</kbd></span><span>เปิดหน้านี้ · เปิด/ปิดเพลง</span>
+    </div>
+    <div class="keys l-en">
+      <span><kbd>←↑↓→</kbd> <kbd>WASD</kbd></span><span>Move · <kbd>SHIFT</kbd> Dodge roll</span>
+      <span><kbd>SPACE</kbd> <kbd>J</kbd></span><span>Attack (hold to repeat · 3-hit Knight combo) · Auto-aims at nearest foe</span>
+      <span><kbd>K</kbd> <kbd>L</kbd></span><span>Skill 1 (unlocks LV2) / Skill 2 (unlocks LV5)</span>
+      <span><kbd>T</kbd></span><span>Skills screen: level up skills and the skill tree (<kbd>TAB</kbd> switches page)</span>
+      <span><kbd>E</kbd></span><span>Talk to NPCs · Trade · Open chests</span>
+      <span><kbd>I</kbd> <kbd>Q</kbd> <kbd>C</kbd> <kbd>V</kbd></span><span>Bag · <kbd>Q</kbd> HP Potion · <kbd>C</kbd> Quick Use · <kbd>V</kbd> Cycle Companion Pet</span>
+      <span><kbd>N</kbd> <kbd>B</kbd> <kbd>Y</kbd></span><span>World map · <kbd>B</kbd> Bestiary · <kbd>Y</kbd> Achievements & Titles (Stat bonuses)</span>
+      <span><kbd>ESC</kbd> <kbd>O</kbd></span><span>Settings: music · sound · language · difficulty</span>
+      <span><kbd>H</kbd> <kbd>M</kbd></span><span>This page · Toggle music</span>
+    </div>
+    <h2>TIPS</h2>
+    <ul class="l-th">
+      <li>รับเควสจาก <b>Elder Brann</b> (เนื้อเรื่อง) และ <b>Mira</b> (ค่าหัว ทำซ้ำได้) ดูป้าย <b>!</b> / <b>?</b> บนหัว</li>
+      <li>ยิ่งไปทางตะวันออกมอนยิ่งเก่ง เก็บของมาขายพ่อค้า ซื้อยา และตีบวกอาวุธที่ทั่งของเขา</li>
+      <li>เลเวลอัปได้ 2 แต้มสกิล ใช้อัปเลเวลสกิล (สูงสุด Lv5) หรืออัปต้นไม้สกิลก็ได้</li>
+      <li><b>ดันเจี้ยน</b>: บันไดในซากปรักหักพัง ลงได้ 3 ชั้น มีบอส Lich King (แนะนำ LV 8+) · <b>ประตูวาร์ป</b>สีม่วงทางเหนือของทุ่งหญ้าไปช่องเขาหิมะ</li>
+      <li>ในหมู่บ้าน HP/MP ฟื้นเร็ว · ปรับความยากได้ในตั้งค่า · เกมเซฟอัตโนมัติ</li>
+    </ul>
+    <ul class="l-en">
+      <li>Take quests from <b>Elder Brann</b> (story) and <b>Mira</b> (repeatable bounties). Look for <b>!</b> / <b>?</b> over their heads.</li>
+      <li>Monsters get tougher to the east. Sell loot to the merchant, buy potions and upgrade gear at his anvil.</li>
+      <li>Each level gives 2 skill points. Spend them on skill levels (max Lv5) or the skill tree.</li>
+      <li><b>Dungeon & Rifts</b>: stairs in the Old Ruins lead 3 floors down to the Lich King. Step on the swirling <b>Abyssal Rift</b> stone in the village for infinite depths!</li>
+      <li>HP/MP regenerate fast in the village · Difficulty is in Settings · The game saves automatically.</li>
+    </ul>
+    <button id="helpClose"><span class="l-th">เริ่มผจญภัย ▶ ENTER</span><span class="l-en">LET'S GO ▶ ENTER</span></button>
+  </div></div>
+</div>
+<div id="touch">
+  <div class="pad">
+    <span></span><button data-k="ArrowUp">▲</button><span></span>
+    <button data-k="ArrowLeft">◀</button><button data-k="ArrowDown">▼</button><button data-k="ArrowRight">▶</button>
+  </div>
+  <div class="act">
+    <button data-k="KeyI">BAG</button><button data-k="KeyQ">POT</button><button data-k="KeyK">S1</button>
+    <button data-k="KeyE">B</button><button data-k="Space">A</button><button data-k="KeyL">S2</button>
+    <button data-k="KeyT">SKILL</button><button data-k="KeyN">MAP</button><button data-k="Escape">⚙</button>
+  </div>
+</div>
+<script src="js/graphics.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/lang-th.js"></script>
+<script src="js/data.js"></script>
+<script src="js/world.js"></script>
+<script src="js/maps.js"></script>
+<!-- map packs: one file per area in maps/ -->
+<script src="maps/frostpeak.js"></script>
+<script src="maps/emberfall.js"></script>
+<script src="js/gameplay.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
