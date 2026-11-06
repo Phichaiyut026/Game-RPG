@@ -25,7 +25,8 @@ const ui = document.getElementById('ui'), uctx = ui.getContext('2d');
 let US = 3;                                   // text-layer pixels per game pixel (= screen scale, set by fitScreen)
 const fontFor = f => settings.lang === 'th'
   ? `600 ${(f === BIG ? 15 : 10) * US}px "Chakra Petch", sans-serif`
-  : `${(f === BIG ? 16 : 8) * US}px "Press Start 2P", monospace`;
+  : f === BIG ? `${15 * US}px "Black Ops One", "Press Start 2P", monospace`   // military stencil for headings & banners
+  : `${8 * US}px "Press Start 2P", monospace`;
 function clearText(x, y, w, h) {
   if (x === undefined) { uctx.save(); uctx.setTransform(1, 0, 0, 1, 0, 0); uctx.clearRect(0, 0, ui.width, ui.height); uctx.restore(); }
   else uctx.clearRect(x * US, y * US, w * US, h * US);

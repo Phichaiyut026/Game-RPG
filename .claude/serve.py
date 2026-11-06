@@ -10,5 +10,6 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 8123
+import os
+port = int(os.environ.get('PORT') or (sys.argv[1] if len(sys.argv) > 1 else 8123))   # PORT (set by launchers) wins over the argument
 http.server.ThreadingHTTPServer(('127.0.0.1', port), NoCacheHandler).serve_forever()

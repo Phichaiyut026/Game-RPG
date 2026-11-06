@@ -53,16 +53,52 @@ const SFX = {
   fire:  () => { tone(200, 0.25, 'sawtooth', 0.2, 500); noise(0.2, 0.15); },
   boom:  () => { noise(0.3, 0.5); tone(120, 0.3, 'square', 0.4, 40); },
   frost: () => { seq([1568, 1319, 1047, 784], 0.04, 'triangle', 0.15, 0.3); noise(0.3, 0.2); },
-  whirl: () => tone(300, 0.3, 'sawtooth', 0.15, 900),
   cry:   () => seq([220, 330, 440], 0.07, 'sawtooth', 0.15, 0.3),
-  dash:  () => { noise(0.12, 0.25); tone(200, 0.12, 'square', 0.15, 700); },
   roll:  () => { noise(0.08, 0.18); tone(260, 0.09, 'triangle', 0.18, 520); },
   combo: () => { noise(0.14, 0.25); tone(620, 0.14, 'sawtooth', 0.2, 140); },
-  warpOut:   () => { tone(180, 0.6, 'sawtooth', 0.1, 1400); tone(360, 0.6, 'square', 0.05, 2800); noise(0.5, 0.08); },
-  warpIn:    () => { seq([1568, 1319, 1047, 784, 1047], 0.05, 'square', 0.1, 0.18); noise(0.2, 0.15); },
   sheathe:   () => { tone(1400, 0.08, 'square', 0.08, 700); noise(0.05, 0.1); },
   unsheathe: () => { noise(0.06, 0.12); tone(900, 0.14, 'square', 0.1, 2400); },
-  gun:   () => { noise(0.05, 0.35); tone(110, 0.06, 'square', 0.22, 45); },
+  gun:   () => { noise(0.06, 0.45); tone(140, 0.08, 'sawtooth', 0.28, 45); tone(80, 0.12, 'square', 0.35, 30); },
+  rifle: () => {
+    // Sharp high-velocity supersonic crack + bass blast
+    noise(0.08, 0.55);
+    tone(180, 0.06, 'sawtooth', 0.38, 45);
+    tone(75, 0.14, 'square', 0.45, 25);
+  },
+  sniper:() => {
+    // Heavy long-range anti-materiel cannon thump + echoing shockwave
+    noise(0.18, 0.7);
+    tone(260, 0.06, 'sawtooth', 0.45, 50);
+    tone(65, 0.28, 'square', 0.65, 18);
+    noise(0.25, 0.22, ac.currentTime + 0.04);
+  },
+  shotgun:() => {
+    // Punchy 12-gauge close-quarters blast with heavy muzzle roar
+    noise(0.16, 0.62);
+    tone(120, 0.14, 'square', 0.48, 28);
+    tone(70, 0.18, 'sawtooth', 0.35, 20);
+  },
+  heavy_mg: () => {
+    noise(0.07, 0.48);
+    tone(110, 0.07, 'square', 0.38, 35);
+    tone(85, 0.10, 'sawtooth', 0.3, 25);
+  },
+  rocket: () => { noise(0.18, 0.3); tone(180, 0.25, 'sawtooth', 0.25, 40); },
+  grenade: () => { tone(1600, 0.04, 'square', 0.15); tone(1200, 0.05, 'square', 0.12, 0, ac.currentTime + 0.05); },
+  reload: () => { seq([900, 1400, 700], 0.05, 'square', 0.05, 0.18); noise(0.04, 0.15); },
+  bolt:   () => { noise(0.05, 0.22); tone(1200, 0.04, 'square', 0.18, 600); tone(1800, 0.06, 'square', 0.2, 900, ac.currentTime + 0.05); },
+  empty:  () => tone(1900, 0.025, 'square', 0.16),
+  flesh_hit: () => { noise(0.05, 0.35); tone(150, 0.06, 'sawtooth', 0.3, 40); },
+  ricochet:  () => { tone(1900 + Math.random() * 600, 0.07, 'square', 0.18, 900 + Math.random() * 300); noise(0.03, 0.12); },
+  radio:  () => { tone(880, 0.04, 'sine', 0.2); tone(1760, 0.06, 'sine', 0.2, 0, ac.currentTime + 0.04); noise(0.04, 0.1, ac.currentTime + 0.04); },
+  siren: () => { tone(520, 0.7, 'sawtooth', 0.12, 980); tone(980, 0.7, 'sawtooth', 0.12, 520, ac.currentTime + 0.7); },
+  cannon: () => { noise(0.35, 0.6); tone(95, 0.35, 'square', 0.5, 25); tone(55, 0.5, 'sine', 0.6, 20); },
+  airstrike: () => {
+    tone(600, 0.15, 'sawtooth', 0.25, 300);
+    noise(0.4, 0.4, ac.currentTime + 0.2);
+    tone(70, 0.4, 'square', 0.5, 20, ac.currentTime + 0.2);
+  },
+  medkit: () => { tone(350, 0.15, 'sine', 0.3, 700); noise(0.08, 0.12); tone(800, 0.2, 'sine', 0.3, 0, ac.currentTime + 0.1); },
   chest: () => seq([523, 659, 784, 1047, 1319], 0.06, 'square', 0.12, 0.3),
   stairs:() => seq([330, 262, 196, 165], 0.09, 'triangle', 0.15, 0.4),
   quest: () => seq([784, 988, 1175, 1568], 0.08, 'square', 0.12, 0.3),

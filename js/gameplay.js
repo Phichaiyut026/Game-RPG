@@ -9,16 +9,20 @@ const addShake = n => { shake = Math.max(shake, n); };
 const keys = {};
 
 function freshPlayer(cls) {
-  const wt = CLASS_WT[cls];
-  return { x: 12 * T + 2, y: 24 * T + 2, w: 12, h: 12, dir: 'down', anim: 0, cls, lvl: 1, xp: 0, gold: 0, potions: 3, hp: 999, mp: 999,
+  const normCls = (cls === 'knight') ? 'assault' : (cls === 'mage') ? 'sniper' : (cls === 'ranger') ? 'heavy' : (cls || 'assault');
+  const wt = CLASS_WT[normCls] || 'rifle';
+  const wTable = WEAPONS[wt] || WEAPONS.rifle;
+  const wpn = { kind:'weapon', wt, name: wTable[0][0], stat:2, rar:0, plus:0, value:10 };
+  return { x: (12 + OX) * T + 2, y: 24 * T + 2, w: 12, h: 12, dir: 'down', anim: 0, cls: normCls, lvl: 1, xp: 0, gold: 0, potions: 3, hp: 999, mp: 999,
     inv: [{ kind:'use', id:'mpot', count:1 }, { kind:'use', id:'scroll', count:1 }], stash: [],
-    weapon: { kind:'weapon', wt, name: WEAPONS[wt][0][0], stat:2, rar:0, plus:0, value:10 },
-    armor: { kind:'armor', name:'Cloth Tunic', stat:1, rar:0, plus:0, value:5 },
+    weapon: wpn,
+    armor: { kind:'armor', name:'Fatigue Webbing', stat:1, rar:0, plus:0, value:5 },
     helm: null, boots: null, ring: null,
+    ammo: maxAmmo(wpn, wt), reloadT: 0, reloadMax: reloadFrames(wpn, wt),
     atkT: 0, cd: 0, hurtT: 0, kx: 0, ky: 0, skillCd: [0, 0], buffT: 0, elixirT: 0, dashT: 0, spinT: 0, target: null,
     rollT: 0, rollCd: 0, rollVx: 0, rollVy: 0, combo: 0, comboT: 0, slowT: 0,
     story: 0, sq: false, sprog: 0, bounty: null, sp: 0, tree: {}, skillLv: [1, 1], critT: 0, buffMul: 1.5, kills: {}, quickId: 'mpot',
-    pet: 'wolf', bestWave: 0, bestRift: 0, achieve: {}, title: null, stats: { rolls: 0, rerolls: 0, wellWishes: 0, riftsEntered: 0 } };
+    pet: 'wolf', bestWave: 0, bestRift: 0, achieve: {}, title: null, scrap: 0, builds: [], stats: { rolls: 0, rerolls: 0, wellWishes: 0, riftsEntered: 0 } };
 }
 const C = () => CLASSES[p.cls];
 const atk = () => Math.round((3 + p.lvl * 2 + (p.weapon ? itemStat(p.weapon) : 0) + (p.ring ? Math.ceil(itemStat(p.ring) * 0.6) : 0) + titleBonus('atk'))
@@ -26,30 +30,52 @@ const atk = () => Math.round((3 + p.lvl * 2 + (p.weapon ? itemStat(p.weapon) : 0
 const def = () => Math.floor(p.lvl / 2) + C().def + (p.armor ? itemStat(p.armor) : 0) + (p.helm ? itemStat(p.helm) : 0) + (p.boots ? itemStat(p.boots) : 0) + titleBonus('def');
 const maxHp = () => Math.round((C().hp[0] + p.lvl * C().hp[1] + (p.helm ? itemStat(p.helm) * 4 : 0) + titleBonus('hp')) * (1 + 0.08 * rank('hp')));
 const maxMp = () => C().mp[0] + p.lvl * C().mp[1] + (p.ring ? itemStat(p.ring) * 3 : 0) + titleBonus('mp');
-const critRate = () => p.critT > 0 ? 1 : Math.min(0.85, 0.1 + (p.ring ? 0.02 * (p.ring.rar + 1) + 0.005 * p.ring.plus : 0) + gearBonus('crit') * 0.01 + (p.elixirT > 0 ? 0.15 : 0) + titleBonus('crit') * 0.01 + (typeof rift !== 'undefined' && rift && riftMod && riftMod.crit ? riftMod.crit * 0.01 : 0));
+const critRate = () => p.critT > 0 ? 1 : Math.min(0.85, 0.1 + (p.ring ? 0.02 * (p.ring.rar + 1) + 0.005 * p.ring.plus : 0) + gearBonus('crit') * 0.01 + 0.05 * rank('crit') + (p.elixirT > 0 ? 0.15 : 0) + titleBonus('crit') * 0.01 + (typeof rift !== 'undefined' && rift && riftMod && riftMod.crit ? riftMod.crit * 0.01 : 0));
 const spdBonus = () => 0.08 * rank('spd') + (p.boots ? Math.min(0.25, 0.03 + itemStat(p.boots) * 0.01) : 0) + (p.elixirT > 0 ? 0.12 : 0) + titleBonus('spd') * 0.01 + (typeof rift !== 'undefined' && rift && riftMod && riftMod.playerSpd ? riftMod.playerSpd * 0.01 : 0);
 const xpNeed = l => Math.floor(20 * l ** 1.6);
 
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.lvl ? s : null; } catch (e) { return null; } }
 function save() {
   try {
-    const { cls, lvl, xp, gold, potions, hp, mp, inv, stash, weapon, armor, helm, boots, ring, story, sq, sprog, bounty, sp, tree, skillLv, akFound, kills, quickId, pet, bestWave, bestRift, achieve, title, stats } = p;
+    if (typeof saveBuilds === 'function') p.builds = saveBuilds();
+    const { cls, lvl, xp, gold, potions, hp, mp, inv, stash, weapon, armor, helm, boots, ring, story, sq, sprog, bounty, sp, tree, skillLv, akFound, kills, quickId, pet, bestWave, bestRift, achieve, title, stats, scrap, builds } = p;
     const { x, y } = (dungeon || arena) ? dungeonReturn : rift ? riftReturn : region ? regionReturn : p;   // always save a main-world position
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ cls, lvl, xp, gold, potions, hp, mp, inv, stash, weapon, armor, helm, boots, ring, x, y, story, sq, sprog, bounty, sp, tree, skillLv, akFound, kills, quickId, pet, bestWave, bestRift, achieve, title, stats }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ cls, lvl, xp, gold, potions, hp, mp, inv, stash, weapon, armor, helm, boots, ring, x, y, story, sq, sprog, bounty, sp, tree, skillLv, akFound, kills, quickId, pet, bestWave, bestRift, achieve, title, stats, scrap, builds, ox: OX }));
   } catch (e) {}
 }
 let saved = loadSave();
 
+// ---- Night frenzy (overworld): 0 by day, 1 at full night. The infected get much tougher in the dark:
+// they take only 40% damage, hit 60% harder, move 35% faster and notice you from 50% further away.
+const nightK = () => (typeof dayState === 'function' && inWorld()) ? clamp(dayState().night / 0.85, 0, 1) : 0;
+const NIGHT = { armor: 0.6, atk: 0.6, spd: 0.35, aggro: 0.5 };
+const nightTaken = e => e && !e.d.dummy ? 1 - NIGHT.armor * nightK() : 1;     // multiplier on damage zombies take
+const nightAtk = () => 1 + NIGHT.atk * nightK();                               // multiplier on damage zombies deal
+let wasNight = false;
+function nightWatch() {                                                        // nightfall / dawn announcements
+  const n = nightK() > 0.6;
+  if (n === wasNight || mode !== 'play') return;
+  wasNight = n;
+  if (n) { banner = { txt: 'NIGHTFALL', t: 180 }; msg('Night falls: the infected are frenzied! Tougher, faster and deadlier until dawn.', '#ff5050'); sfx('cry'); }
+  else msg('Dawn breaks. The infected slow down again.', '#ffd860');
+}
+
+// ---- Horde strength: every ordinary zombie (not bosses, not the firing-range dummy) has more HP and hits
+// harder, and the sectors hold more of them, refilled faster (spawner). Invasion waves are bigger too.
+const ZOMBIE_BUFF = { hp: 1.6, atk: 1.3, count: 1.5, invasion: 1.35 };
+const zombieCount = n => Math.round(n * ZOMBIE_BUFF.count);
+
 function mkEnemy(type, x, y, zone, scale = 1, forceElite = false) {
   const b = ETYPES[type], hm = DIFF().hp;                // difficulty scales enemy HP
+  const zb = !b.boss && !b.dummy ? ZOMBIE_BUFF : { hp: 1, atk: 1 };
   const elite = forceElite ? (typeof forceElite === 'string' ? forceElite : ELITE_KEYS[ri(0, ELITE_KEYS.length - 1)])
     : (!b.boss && !b.dummy && R() < 0.12 ? ELITE_KEYS[ri(0, ELITE_KEYS.length - 1)] : null);
   const em = elite ? ELITE_MODS[elite] : null;
-  const d = (scale === 1 && hm === 1 && !em) ? b : {
+  const d = (scale === 1 && hm === 1 && !em && zb.hp === 1) ? b : {
     ...b,
     name: em ? `${em.name} ${b.name}` : b.name,
-    hp: Math.round(b.hp * scale * hm * (em ? em.hp : 1)),
-    atk: Math.round(b.atk * scale * (em ? em.atk : 1)),
+    hp: Math.round(b.hp * scale * hm * (em ? em.hp : 1) * zb.hp),
+    atk: Math.round(b.atk * scale * (em ? em.atk : 1) * zb.atk),
     spd: b.spd * (em ? em.spd : 1),
     xp: Math.round(b.xp * scale * (em ? em.xp : 1)),
     gold: em ? [Math.round(b.gold[0] * em.gold), Math.round(b.gold[1] * em.gold)] : b.gold,
@@ -80,42 +106,56 @@ function updateEprojs() {
 function spawnOne(type, zone, anywhere) {
   const d = ETYPES[type], w = d.w || 12, h = d.h || 12;
   for (let i = 0; i < 30; i++) {
-    const x = ri(zone.x0, zone.x1) * T + 2, y = ri(2, MH - 3) * T + 2;
+    const x = ri(zone.x0, zone.x1) * T + 2, y = ri(zone.y0 ?? 2, zone.y1 ?? MH - 3) * T + 2;
     if (blocked(x, y, w, h, true)) continue;
     if (!anywhere && Math.hypot(x - p.x, y - p.y) < 200) continue;
-    enemies.push(mkEnemy(type, x, y, zone.name)); return;
+    enemies.push(mkEnemy(type, x, y, zone.name, zone.scale || 1)); return;
   }
 }
 function populate() {
   enemies = []; pickups = [];
-  for (const z of ZONES) for (const [type, n] of z.mobs) for (let i = 0; i < n; i++) spawnOne(type, z, true);
-  enemies.push(mkEnemy('dummy', 20 * T + 2, 22 * T + 2, 'Ironvale Village'));
+  for (const z of ZONES) for (const [type, n] of z.mobs) for (let i = 0; i < zombieCount(n); i++) spawnOne(type, z, true);
+  enemies.push(mkEnemy('dummy', (20 + OX) * T + 2, 38 * T + 2, 'Ironvale Village'));   // firing range
   bossCD = 0;
 }
 function startGame(fromSave, cls) {
   dungeon = 0; arena = 0; arenaWait = 0; rift = 0; riftMod = null; region = null; warp = null; map = world; MW = WW; MH = WH; worldState = null; torches = []; eprojs = [];
-  p = freshPlayer(fromSave && saved ? saved.cls || 'knight' : cls);
-  if (fromSave && saved) Object.assign(p, saved, { cls: saved.cls || 'knight' });
+  const chosenCls = fromSave && saved ? saved.cls || 'assault' : cls || 'assault';
+  const normCls = (chosenCls === 'knight') ? 'assault' : (chosenCls === 'mage') ? 'sniper' : (chosenCls === 'ranger') ? 'heavy' : chosenCls;
+  p = freshPlayer(normCls);
+  if (fromSave && saved) {
+    Object.assign(p, saved, { cls: normCls });
+    if (p.weapon && ['sword', 'staff', 'bow'].includes(p.weapon.wt)) {
+      p.weapon.wt = CLASS_WT[p.cls] || 'rifle';
+    }
+  }
   p.stash = p.stash || []; p.kills = p.kills || {}; p.quickId = p.quickId || 'mpot';
   p.pet = p.pet || 'wolf'; p.bestWave = p.bestWave || 0; p.bestRift = p.bestRift || 0;
   p.achieve = p.achieve || {}; p.title = p.title || null;
   p.stats = p.stats || { rolls: 0, rerolls: 0, wellWishes: 0, riftsEntered: 0 };
+  p.reloadT = 0; p.reloadMax = reloadFrames(p.weapon);
+  if (typeof p.ammo !== 'number' || p.ammo <= 0 || p.ammo > maxAmmo(p.weapon)) p.ammo = maxAmmo(p.weapon);
   if (fromSave && saved && saved.sp === undefined) { p.sp = p.lvl - 1; p.tree = {}; }   // saves from before the skill tree
   if (fromSave && saved && !saved.skillLv) p.sp += p.lvl - 1;      // levels now give 2 points: back-pay older saves
-  if (blocked(p.x, p.y, p.w, p.h, false)) { p.x = 12 * T + 2; p.y = 24 * T + 2; }
+  if (fromSave && saved && (saved.ox || 0) !== OX) {                // saves from before the world grew west: same spot, new numbers
+    p.x += (OX - (saved.ox || 0)) * T;
+    if (p.builds) p.builds = p.builds.map(([id, tx, ty, hp]) => [id, tx + OX - (saved.ox || 0), ty, hp]);
+  }
+  if (blocked(p.x, p.y, p.w, p.h, false)) { p.x = (12 + OX) * T + 2; p.y = 24 * T + 2; }
   petObj = { x: p.x - 14, y: p.y + 4, cd: 60, face: 1, anim: 0 };
-  world[4][63] = p.akFound ? ',' : 'K'; miniFor = null;           // the secret chest only opens once per save
+  world[4][63 + OX] = p.akFound ? ',' : 'K'; miniFor = null;           // the secret cache only opens once per save
   p.hp = Math.min(p.hp, maxHp()); p.mp = Math.min(p.mp ?? 999, maxMp());
   populate(); floats = []; parts = []; msgs = []; projs = []; rings = [];
+  p.scrap = p.scrap || 0; loadBuilds(p.builds);                  // player-built base structures (build.js)
   initBots();
   zoneName = zoneAt(p.x); banner = { txt: zoneName, t: 150 };
   checkAchievements();
   if (fromSave) mode = 'play';
   else {
     say(ELDER,
-      `Welcome, young ${C().name.toLowerCase()}! I am Brann, elder of Ironvale. Monsters plague the lands east of our village.`,
-      'Talk to me when you see a ! over my head. Mira the hunter posts bounties, and the merchant buys your loot.',
-      'At LV 2 and LV 5 you will learn class skills: press K and L. Press T to train them.');
+      `Welcome to FOB Ironvale, Operative! Commander Vance here. Hostile insurgents and combat vehicles have seized the sectors east of our base.`,
+      'Report to me for mission briefings (!). Drill Sgt. Miller posts bounties, and Quartermaster Higgins upgrades your firearms and equipment.',
+      'At LV 2 and LV 5 you unlock tactical weapon skills (K and L). Press T to access the Specialization Training Tree.');
     dialogDone = () => { if (!helpSeen()) openHelp(); };
     save();
   }
@@ -205,40 +245,41 @@ function newBounty() {
 }
 function talk(n) {
   if (n === MERCH) return openShop();
-  if (n.id === 'guard') { say(n, GUARD_TIPS[guardTip++ % GUARD_TIPS.length]); return; }
+  if (n.id === 'farmer') { say(n, n.lines[n.tip++ % n.lines.length]); return; }
+  if (n.id === 'guard' || n.id === 'outpost_guard') { say(n, GUARD_TIPS[guardTip++ % GUARD_TIPS.length]); return; }
   if (n.id === 'seer') {
     const best = p.bestRift || 0;
     return say(n,
-      'The cosmic fabric is tearing apart... Beyond this swirling rift lies the infinite Abyss.',
-      'Each depth is darker and more treacherous than the last, warped by shifting cosmic anomalies.',
-      `Every 5th depth awakens an Abyssal Guardian with untold treasures. Deepest descent: Depth ${best}.`,
-      'Step onto the Abyssal Rift (V) when you are prepared. May the stars guide your blade.');
+      'Warning, operative: Sub-space anomaly detected. Hostile combatants and prototype tech detected beyond this rift.',
+      'Each depth is darker and more heavily fortified, with unstable combat modifiers in effect.',
+      `Every 5th depth encounters a massive Heavy Prototype Mech with top-tier loot. Deepest infiltration: Sector Depth ${best}.`,
+      'Step onto the Abyssal Jump Pad (V) when ready. Lock and load.');
   }
   if (n === ELDER) {
     const q = storyQ();
-    if (!q) return say(ELDER, 'Ironvale is at peace thanks to you, hero. Mira still pays for monster bounties if you want work.');
-    if (!p.sq) { p.sq = true; p.sprog = 0; sfx('quest'); save(); return say(ELDER, q.intro, `NEW QUEST: ${q.name}. ${goalText(q)}. Reward: ${q.gold}G, ${q.xp} XP.`); }
+    if (!q) return say(ELDER, 'FOB Ironvale and all surrounding sectors are secure, Operative! Outstanding combat service. Drill Sgt. Miller still has tactical bounties if you need combat pay.');
+    if (!p.sq) { p.sq = true; p.sprog = 0; sfx('quest'); save(); return say(ELDER, q.intro, `OPERATION BRIEFING: ${q.name}. ${goalText(q)}. Combat Pay: ${q.gold}G, ${q.xp} XP.`); }
     if (storyReady()) {
       if (q.type === 'collect') removeMats(q.target, q.n);
       p.story++; p.sq = false; p.sprog = 0;
       say(ELDER, q.done); dialogDone = () => giveReward(q);
       return;
     }
-    return say(ELDER, `${goalText(q)}. Progress: ${qProg(q)}/${q.n}. Do not give up!`);
+    return say(ELDER, `${goalText(q)}. Progress: ${qProg(q)}/${q.n}. Stay frosty, soldier!`);
   }
   if (n === HUNTER) {
     const b = p.bounty;
     if (!b) {
       p.bounty = newBounty(); sfx('quest'); save();
-      return say(HUNTER, 'Need coin? I pay for every beast you put down out there.',
-        `BOUNTY: Slay ${p.bounty.n} ${PLURAL[p.bounty.target]}. Reward: ${p.bounty.gold}G, ${p.bounty.xp} XP.`);
+      return say(HUNTER, 'Looking for combat pay, soldier? High Command pays top dollar for every hostile insurgent you eliminate.',
+        `TACTICAL BOUNTY: Eliminate ${p.bounty.n} ${PLURAL[p.bounty.target]}. Bounty: ${p.bounty.gold}G, ${p.bounty.xp} XP.`);
     }
-    if (b.prog >= b.n) { p.bounty = null; say(HUNTER, `Clean work! Here is your ${b.gold}G. Come back for more.`); dialogDone = () => giveReward(b); return; }
-    return say(HUNTER, `Still hunting? ${PLURAL[b.target]}: ${b.prog}/${b.n}.`);
+    if (b.prog >= b.n) { p.bounty = null; say(HUNTER, `Good shooting, soldier! Here is your ${b.gold}G combat pay. Stay sharp.`); dialogDone = () => giveReward(b); return; }
+    return say(HUNTER, `Still tracking hostiles? ${PLURAL[b.target]}: ${b.prog}/${b.n}. Check your corners!`);
   }
   if (n === ARENA_NPC) {
-    say(ARENA_NPC, `Hail, gladiator! Test your might in the Endless Colosseum! (Best Wave: ${p.bestWave || 0})`,
-      'Waves grow stronger and every 5th wave unleashes a Boss! Step on the stairs (<) anytime to leave with your spoils.');
+    say(ARENA_NPC, `At ease, soldier! Test your squad combat tactics in the Perimeter Defense Line! (Best Wave: ${p.bestWave || 0})`,
+      'Enemy attack waves grow heavier each round, and every 5th wave brings a Heavy Combat Vehicle! Step on the helipad (<) anytime to extract.');
     dialogDone = () => enterArena();
     return;
   }
@@ -253,36 +294,126 @@ function dodgeRoll() {
   if (!dx && !dy) [dx, dy] = dirVec();
   const l = Math.hypot(dx, dy) || 1;
   p.rollVx = dx / l * 3.8; p.rollVy = dy / l * 3.8;
-  p.rollT = 10; p.rollCd = 90; p.hurtT = Math.max(p.hurtT, 14);
+  p.rollT = 10; p.rollCd = Math.round(90 * (1 - 0.2 * rank('roll'))); p.hurtT = Math.max(p.hurtT, 14);
+  if (rank('s2x')) p.critT = 180;
   burst(p.x + 6, p.y + 10, '#d8d0c0', 6); sfx('roll');
   checkAchievements();
 }
+
+function ejectShell(x, y, ang) {
+  const side = ang + Math.PI / 2 + (R() - 0.5) * 0.45;
+  const spd = 1.4 + R() * 1.2;
+  parts.push({ x, y, vx: Math.cos(side) * spd, vy: Math.sin(side) * spd, t: 18, c: '#ffd700' });
+}
+
+function spawnGunpowderSmoke(x, y, ang) {
+  const fwd = 12;
+  const mx = x + Math.cos(ang) * fwd, my = y + Math.sin(ang) * fwd;
+  for (let i = 0; i < 3; i++) {
+    const spread = ang + (R() - 0.5) * 0.6;
+    const sp = 0.4 + R() * 0.8;
+    parts.push({
+      x: mx, y: my,
+      vx: Math.cos(spread) * sp, vy: Math.sin(spread) * sp - 0.2,
+      t: 14 + ri(0, 8),
+      c: i === 0 ? '#f0f4f8' : (i === 1 ? '#c8d0d8' : '#889098')
+    });
+  }
+}
+
+function startReload(auto = false) {
+  if (!p || p.reloadT > 0) return false;
+  const mx = maxAmmo(p.weapon);
+  if (typeof p.ammo !== 'number') p.ammo = mx;
+  if (p.ammo >= mx) return false;
+  const dur = Math.max(16, Math.round(reloadFrames(p.weapon) * (1 - 0.12 * rank('s2c')) * (p.elixirT > 0 ? 0.8 : 1)));
+  p.reloadMax = dur;
+  p.reloadT = dur;
+  // Eject spent magazine onto the ground
+  for (let i = 0; i < 3; i++) {
+    parts.push({ x: p.x + 6, y: p.y + 8, vx: (R() - 0.5) * 1.4, vy: 1.0 + R() * 0.8, t: 28, c: i === 0 ? '#ffd700' : '#4a4e5c' });
+  }
+  float(p.x + 6, p.y - 10, 'RELOADING...', '#ffd860');
+  sfx('reload');
+  return true;
+}
+
 function attack() {
-  if (p.cd > 0 || p.dashT > 0 || p.rollT > 0) return;
-  if (hasGun()) {                                    // secret AK: rapid auto-aimed bullets with slight spread
-    shoot('bullet', 6.5, 0.45 * (1 + 0.1 * rank('atk')), (R() - 0.5) * 0.12);
-    p.cd = 6; p.atkT = 4; sfx('gun');
-    const q = projs[projs.length - 1];
-    parts.push({ x: q.x, y: q.y, vx: 0, vy: 0, t: 3, c: '#fff6a0' }, { x: q.x + q.vx * 0.4, y: q.y + q.vy * 0.4, vx: 0, vy: 0, t: 3, c: '#ffb020' });
+  if (p.cd > 0 || p.dashT > 0 || p.rollT > 0 || p.reloadT > 0) return;
+  const mx = maxAmmo(p.weapon);
+  if (typeof p.ammo !== 'number') p.ammo = mx;
+  if (p.ammo <= 0) {
+    sfx('empty');
+    startReload(true);
     return;
   }
-  if (p.cls === 'knight') {
-    p.combo = p.comboT > 0 ? (p.combo + 1) % 3 : 0;
-    p.comboT = 42;
-    p.aimA = aimAngle(); p.atkT = SWING; p.cd = p.combo === 2 ? 25 : 19; swingId++;
-    if (p.combo === 2) {
-      sfx('combo'); addShake(3);
-      rings.push({ x: p.x + 6 + Math.cos(p.aimA) * 14, y: p.y + 6 + Math.sin(p.aimA) * 14, r: 4, max: 26, c: '#f8c838', t: 12 });
-    } else sfx('swing');
+  p.ammo--;
+  const ang = aimAngle();
+  const cx = p.x + 6, cy = p.y + 6;
+
+  // Realistic firearm recoil pushback
+  const recoilKnock = hasGun() ? 0.9 : (p.cls === 'sniper' ? 2.4 : p.cls === 'heavy' ? 2.0 : 1.3);
+  p.kx -= Math.cos(ang) * recoilKnock;
+  p.ky -= Math.sin(ang) * recoilKnock;
+  spawnGunpowderSmoke(cx, cy, ang);
+
+  // Dynamic recoil bloom: rapid sustained firing slightly increases cone of fire
+  const sprayBloom = Math.min(0.08, (p.sprayCount || 0) * 0.012);
+  p.sprayCount = (p.sprayCount || 0) + 1;
+  p.sprayResetT = 24;
+
+  const cls = (p.cls === 'knight') ? 'assault' : (p.cls === 'mage') ? 'sniper' : (p.cls === 'ranger') ? 'heavy' : p.cls;
+
+  // Muzzle flash flash-ring
+  rings.push({ x: cx + Math.cos(ang) * 9, y: cy + Math.sin(ang) * 9, r: 2, max: (cls === 'sniper' ? 16 : cls === 'heavy' ? 14 : 10), c: '#ffe070', t: 4 });
+
+  if (hasGun()) {                                    // Legendary AK-47: rapid auto-aimed bullets with slight spread
+    shoot('bullet', 7.2, 0.55 * (1 + 0.1 * rank('atk')), (R() - 0.5) * (0.08 + sprayBloom));
+    p.cd = 5; p.atkT = 3; sfx('rifle'); addShake(1.2);
+    ejectShell(cx, cy, ang);
+    parts.push({ x: cx + Math.cos(ang) * 8, y: cy + Math.sin(ang) * 8, vx: 0, vy: 0, t: 4, c: '#fff6a0' });
+    if (p.ammo <= 0) startReload(true);
+    return;
   }
-  else if (p.cls === 'mage') { shoot('bolt', 3.2, 1 + 0.1 * rank('atk')); p.cd = 26; p.atkT = 8; sfx('zap'); }
-  else { shoot('arrow', 4.5, 0.8 * (1 + 0.1 * rank('atk'))); p.cd = 18; p.atkT = 8; sfx('bow'); }
+
+  if (cls === 'assault') {
+    // Assault Specialist: automatic rifle bursts with 3-round rhythm and tracer round
+    p.combo = p.comboT > 0 ? (p.combo + 1) % 3 : 0;
+    p.comboT = 36;
+    const isTracer = p.combo === 2;
+    shoot('bullet', 6.6, (isTracer ? 1.15 : 0.75) * (1 + 0.1 * rank('atk')), (R() - 0.5) * (0.06 + sprayBloom));
+    p.cd = isTracer ? 13 : 8; p.atkT = 5;
+    sfx('rifle'); addShake(isTracer ? 2.2 : 1.4);
+    ejectShell(cx, cy, ang);
+    if (isTracer) {
+      parts.push({ x: cx + Math.cos(ang) * 9, y: cy + Math.sin(ang) * 9, vx: 0, vy: 0, t: 5, c: '#ffd700' });
+    }
+  }
+  else if (cls === 'sniper') {
+    // Recon Sniper: high-velocity piercing long-range round (tight accuracy)
+    shoot('sniper', 9.2, 2.35 * (1 + 0.1 * rank('atk')), (R() - 0.5) * 0.015);
+    p.cd = 26; p.atkT = 7;
+    sfx('sniper'); addShake(4.5);
+    ejectShell(cx, cy, ang);
+    for (let k = 0; k < 4; k++) parts.push({ x: cx + Math.cos(ang) * 10, y: cy + Math.sin(ang) * 10, vx: Math.cos(ang + (R()-0.5)*0.5)*1.5, vy: Math.sin(ang + (R()-0.5)*0.5)*1.5, t: 10, c: '#c0d0e0' });
+  }
+  else {
+    // Heavy Gunner: 4-pellet buckshot spread
+    for (let k = 0; k < 4; k++) {
+      shoot('shotgun', 5.5 + (R()-0.5)*0.6, 0.45 * (1 + 0.1 * rank('atk')), (k - 1.5) * 0.12 + (R()-0.5)*(0.04 + sprayBloom));
+    }
+    p.cd = 18; p.atkT = 6;
+    sfx('shotgun'); addShake(3.2);
+    ejectShell(cx, cy, ang);
+    parts.push({ x: cx + Math.cos(ang) * 8, y: cy + Math.sin(ang) * 8, vx: 0, vy: 0, t: 4, c: '#ff9020' });
+  }
+  if (p.ammo <= 0) startReload(true);
 }
 const hasGun = () => p.weapon && p.weapon.wt === 'gun';
-const isRanged = () => p.cls !== 'knight' || hasGun();
-const AIM_RANGE = 170, MELEE_AIM_RANGE = 110;
+const isRanged = () => true;
+const AIM_RANGE = 180, MELEE_AIM_RANGE = 140;
 function findTarget() {
-  const cx = p.x + 6, cy = p.y + 6, [fx, fy] = dirVec(), range = isRanged() ? AIM_RANGE : MELEE_AIM_RANGE;
+  const cx = p.x + 6, cy = p.y + 6, [fx, fy] = dirVec(), range = AIM_RANGE;
   let best = null, bestScore = Infinity;
   for (const e of enemies) {
     if (e.dead) continue;
@@ -302,9 +433,9 @@ function aimAngle() {
 }
 function shoot(kind, spd, mult, ang = 0) {
   const base = aimAngle(), a = base + ang;
-  p.aimA = base;                                     // the held bow/staff/gun points this way while firing
+  p.aimA = base;                                     // the held firearm points this way while firing
   projs.push({ kind, mult, x: p.x + 6 + Math.cos(a) * 6, y: p.y + 6 + Math.sin(a) * 6,
-    vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, life: Math.round(170 / spd) });
+    vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, life: Math.round(180 / spd) });
 }
 function areaHit(x, y, r, mult, onHit) {
   for (const e of enemies) {
@@ -314,63 +445,71 @@ function areaHit(x, y, r, mult, onHit) {
   }
 }
 function explode(x, y, mult) {
-  const r = rank('s1x') ? 48 : 32;
+  const r = rank('s1x') ? 50 : 36;
   areaHit(x, y, r, mult);
-  rings.push({ x, y, r: 4, max: r, c: '#ff8030', t: 16 }); burst(x, y, '#ff9030', 14); sfx('boom'); addShake(4);
+  rings.push({ x, y, r: 4, max: r, c: '#ff8030', t: 16 }); burst(x, y, '#ff9030', 16); sfx('boom'); addShake(4);
 }
-const PCOL = { bolt: '#8060ff', fire: '#ff8030', ice: '#80e8ff' };
+const PCOL = {
+  bolt: '#8060ff', fire: '#ff8030', ice: '#80e8ff',
+  bullet: '#ffe060', sniper: '#b0f0ff', shotgun: '#ffaa30', rocket: '#ff4020'
+};
 function updateProjs() {
   for (const q of projs) {
     q.x += q.vx; q.y += q.vy; q.life--;
-    if (PCOL[q.kind]) parts.push({ x: q.x, y: q.y, vx: 0, vy: 0, t: 8, c: PCOL[q.kind] });
+    if (PCOL[q.kind]) parts.push({ x: q.x, y: q.y, vx: 0, vy: 0, t: (q.kind === 'sniper' ? 6 : 3), c: PCOL[q.kind] });
     const tx = Math.floor(q.x / T), ty = Math.floor(q.y / T);
     const wallHit = tx < 0 || ty < 0 || tx >= MW || ty >= MH || (SOLID.has(map[ty][tx]) && map[ty][tx] !== '~');
     const box = { x: q.x - 3, y: q.y - 3, w: 6, h: 6 }, e = enemies.find(e => !e.dead && overlap(box, e));
-    if (e && q.kind !== 'fire') {
+    if (e && q.kind !== 'fire' && q.kind !== 'rocket') {
       const l = Math.hypot(q.vx, q.vy) || 1;
       damageEnemy(e, q.vx / l, q.vy / l, q.mult);
+      // Realistic ballistic flesh impact & directional blood spray
+      const bVx = q.vx / l, bVy = q.vy / l;
+      for (let k = 0; k < 4; k++) {
+        const spread = (R() - 0.5) * 0.9;
+        const sp = 1.0 + R() * 2.2;
+        parts.push({
+          x: q.x, y: q.y,
+          vx: (bVx * Math.cos(spread) - bVy * Math.sin(spread)) * sp,
+          vy: (bVx * Math.sin(spread) + bVy * Math.cos(spread)) * sp,
+          t: 12 + ri(0, 8),
+          c: k % 2 === 0 ? '#981818' : '#5c0a0a'
+        });
+      }
+      // Bullet stopping power flinch
+      e.stun = Math.max(e.stun || 0, q.kind === 'sniper' ? 14 : q.kind === 'shotgun' ? 10 : 6);
+      sfx('flesh_hit');
+      if (q.kind === 'sniper') {
+        q.mult *= 0.75;
+        q.pierce = (q.pierce || 0) + 1;
+        if (q.pierce >= 2) q.life = 0;
+      } else {
+        q.life = 0;
+      }
       if (q.kind === 'ice' && !e.dead) { e.frozen = Math.max(e.frozen || 0, e.d.boss ? 25 : 70); burst(e.x + e.w / 2, e.y + e.h / 2, '#90e8ff', 6); }
+    }
+    else if (wallHit) {
+      if (q.kind === 'fire' || q.kind === 'rocket') {
+        explode(q.x, q.y, q.mult);
+      } else {
+        // High-velocity wall strike sparks & dust puff
+        for (let k = 0; k < 3; k++) {
+          parts.push({ x: q.x, y: q.y, vx: -q.vx * 0.25 + (R() - 0.5) * 2, vy: -q.vy * 0.25 + (R() - 0.5) * 2, t: 8 + ri(0, 6), c: k === 0 ? '#ffffff' : '#ffd060' });
+        }
+        parts.push({ x: q.x, y: q.y, vx: (R() - 0.5) * 0.6, vy: -0.4 - R() * 0.4, t: 12, c: '#9a9488' });
+        sfx('ricochet');
+      }
       q.life = 0;
     }
-    else if (e || wallHit || q.life <= 0) { if (q.kind === 'fire') explode(q.x, q.y, q.mult); q.life = 0; }
+    else if (q.life <= 0) {
+      if (q.kind === 'fire' || q.kind === 'rocket') explode(q.x, q.y, q.mult);
+      q.life = 0;
+    }
   }
   projs = projs.filter(q => q.life > 0);
 }
 function useSkill(i) {
-  if (p.dashT > 0) return;
-  const s = C().skills[i];
-  if (p.lvl < s.lvl) { msg(`${s.name} unlocks at LV ${s.lvl}`, '#a0a8e0'); return sfx('no'); }
-  if (p.skillCd[i] > 0) return sfx('no');
-  if (p.mp < s.mp) { msg('Not enough MP!', '#60c0ff'); return sfx('no'); }
-  // skill level (T > SKILLS): +20% power and -6% cooldown per level above 1
-  const lv = p.skillLv[i], lvMul = 1 + 0.2 * (lv - 1);
-  p.mp -= s.mp; p.skillCd[i] = Math.round(s.cd * (1 - 0.2 * rank(i ? 's2c' : 's1c')) * (1 - 0.06 * (lv - 1)) * (1 - Math.min(0.45, gearBonus('cdr') * 0.01)) * ((typeof rift !== 'undefined' && rift && riftMod && riftMod.playerCdr) ? 0.75 : 1));
-  const cx = p.x + 6, cy = p.y + 6, pow = (1 + 0.25 * rank('s1p')) * lvMul;
-  switch (s.name) {
-    case 'Whirlwind': {
-      const r = rank('s1x') ? 50 : 34;
-      p.spinT = 18; swingId++; areaHit(cx, cy, r, 1.5 * pow);
-      rings.push({ x: cx, y: cy, r: 6, max: r, c: '#e0e0ff', t: 14 }); sfx('whirl'); addShake(3); break;
-    }
-    case 'War Cry': {
-      const h = Math.round(maxHp() * (0.3 + 0.05 * (lv - 1))), fury = rank('s2x');
-      p.buffT = (fury ? 720 : 480) + 60 * (lv - 1); p.buffMul = fury ? 1.75 : 1.5; p.hp = Math.min(maxHp(), p.hp + h);
-      float(cx, p.y - 12, 'ATK UP', '#ff9040'); float(cx, p.y + 2, '+' + h, '#58d858');
-      rings.push({ x: cx, y: cy, r: 4, max: 44, c: '#ff9040', t: 20 }); sfx('cry'); break;
-    }
-    case 'Fireball': shoot('fire', 2.6, 2 * pow); sfx('fire'); break;
-    case 'Frost Nova': {
-      const deep = rank('s2x'), r = deep ? 80 : 60;
-      areaHit(cx, cy, r, 1.2 * lvMul, e => { e.frozen = e.d.boss ? 60 : (deep ? 300 : 180) + 20 * (lv - 1); });
-      rings.push({ x: cx, y: cy, r: 6, max: r, c: '#a0e0ff', t: 20 }); burst(cx, cy, '#c0f0ff', 20); sfx('frost'); addShake(4); break;
-    }
-    case 'Multishot': {
-      const n = rank('s1x') ? 7 : 5;
-      for (let k = 0; k < n; k++) shoot('arrow', 4.5, 0.8 * pow, (k - (n - 1) / 2) * 0.18);
-      sfx('bow'); break;
-    }
-    case 'Dash': p.dashT = 12 + 2 * (lv - 1); p.hurtT = Math.max(p.hurtT, 20); if (rank('s2x')) p.critT = 180; sfx('dash'); break;
-  }
+  // Legacy active skills removed in favor of tactical shooter mechanics
 }
 function swingHits() {
   const [dx, dy] = dirVec(), a = p.aimA ?? Math.atan2(dy, dx), vx = Math.cos(a), vy = Math.sin(a);
@@ -387,7 +526,7 @@ function swingHits() {
 function damageEnemy(e, vx, vy, mult = 1) {
   const crit = R() < critRate(), mMul = hasMastery(e.type) ? 1.15 : 1;
   const bMul = (e.d.boss && titleBonus('bossDmg')) ? (1 + titleBonus('bossDmg') * 0.01) : 1;
-  let dmg = Math.max(1, Math.round(atk() * mult * mMul * bMul * (0.85 + R() * 0.3)) - e.d.def);
+  let dmg = Math.max(1, Math.round(atk() * mult * mMul * bMul * (0.85 + R() * 0.3) * nightTaken(e)) - e.d.def);
   if (crit) {
     const cMul = (typeof rift !== 'undefined' && rift && riftMod && riftMod.critDmg) ? riftMod.critDmg : 2;
     dmg *= cMul; addShake(2); burst(e.x + e.w / 2, e.y + e.h / 2, '#f8c838', 6);
@@ -410,46 +549,61 @@ function damageEnemy(e, vx, vy, mult = 1) {
   if (e.hp <= 0) killEnemy(e);
 }
 function drop(x, y, o) { pickups.push(Object.assign({ x, y, vx: (R() - 0.5) * 3, vy: (R() - 0.5) * 3, t: 0, life: 9000 }, o)); }
+// Zombies (and bosses) no longer drop anything on the ground: whatever a kill is worth goes straight to the player
+// (gold and scrap to the purse, samples / consumables / gear to the bag; if the bag is full, to the supply locker).
+function lootTo(x, y, o) {
+  const pk = Object.assign({ x, y }, o);
+  if (canCarry(pk)) return collect(pk);
+  p.stash = p.stash || [];
+  if (pk.kind === 'gear') p.stash.push(pk.item);
+  else { const s = p.stash.find(i => i.kind === pk.kind && i.id === pk.id); if (s) s.count++; else p.stash.push({ kind: pk.kind, id: pk.id, count: 1 }); }
+  msg('Bag full: the loot went to your supply locker.', '#c0c0d0');
+}
 function killEnemy(e) {
   e.dead = true; sfx('kill');
   const cx = e.x + e.w / 2, cy = e.y + e.h / 2, d = e.d;
   burst(cx, cy, e.type === 'slime' ? '#7ad858' : e.type === 'skel' ? '#ffffff' : '#c83030', d.boss ? 30 : 10);
-  gainXp(Math.round(d.xp * DIFF().xp));
-  drop(cx, cy, { kind:'gold', amt: Math.round(ri(d.gold[0], d.gold[1]) * DIFF().gold) });
-  if (R() < d.drop[1]) drop(cx, cy, { kind:'mat', id: d.drop[0] });
+  const xpAmt = Math.round(d.xp * DIFF().xp);
+  gainXp(xpAmt);
+  // Prominently reward player with floating XP gain (Zombies award XP/level progression)
+  float(cx, cy - 14, `+${xpAmt} XP`, '#4dc3ff');
+  lootTo(cx, cy, { kind:'gold', amt: Math.round(ri(d.gold[0], d.gold[1]) * DIFF().gold) });
+  if (d.boss) lootTo(cx, cy, { kind:'scrap', amt: ri(15, 30) });            // scrap for base building (build.js)
+  else if (R() < 0.4) lootTo(cx, cy, { kind:'scrap', amt: ri(1, 2) + (d.tier || 0) });
+  if (R() < d.drop[1]) lootTo(cx, cy, { kind:'mat', id: d.drop[0] });
   onKill(e.type);
   if (typeof rift !== 'undefined' && rift) {
     p.stats = p.stats || {}; p.stats.riftKills = (p.stats.riftKills || 0) + 1;
     if (d.boss) {
-      for (let i = 0; i < ri(3, 5); i++) drop(cx, cy, { kind: 'mat', id: 'abyssal_shard' });
+      for (let i = 0; i < ri(3, 5); i++) lootTo(cx, cy, { kind: 'mat', id: 'abyssal_shard' });
       msg('★ Abyssal Guardian Defeated! The rift stirs...', '#c080ff'); sfx('rare');
     } else if (e.elite) {
-      for (let i = 0; i < ri(1, 2); i++) drop(cx, cy, { kind: 'mat', id: 'abyssal_shard' });
+      for (let i = 0; i < ri(1, 2); i++) lootTo(cx, cy, { kind: 'mat', id: 'abyssal_shard' });
     } else if (R() < 0.35 + Math.min(0.35, rift * 0.02)) {
-      drop(cx, cy, { kind: 'mat', id: 'abyssal_shard' });
+      lootTo(cx, cy, { kind: 'mat', id: 'abyssal_shard' });
     }
   }
-  if (R() < d.gear) drop(cx, cy, { kind:'gear', item: rollGear(d.tier, d.boss ? 2 : 0) });
+  // Zombies do NOT drop guns (zombies yield only XP/levels, scrap gold, and organic samples).
+  // Guns & weapons are obtained via Military Crates, Tactical Caches, and Quartermaster Higgins crafting.
   if (e.elite) {
     const em = ELITE_MODS[e.elite];
     burst(cx, cy, em.c, 22); rings.push({ x: cx, y: cy, r: 4, max: 32, c: em.c, t: 16 });
-    if (R() < 0.45 || em.extraLoot) drop(cx, cy, { kind:'gear', item: rollGear(d.tier, em.extraLoot ? 1 : 0) });
     if (em.extraLoot) {
-      for (let i = 0; i < 3; i++) drop(cx, cy, { kind:'gold', amt: Math.round(ri(d.gold[0], d.gold[1]) * 0.55 * DIFF().gold) });
+      for (let i = 0; i < 3; i++) lootTo(cx, cy, { kind:'gold', amt: Math.round(ri(d.gold[0], d.gold[1]) * 0.55 * DIFF().gold) });
       msg('★ Treasure Champion slain! Bonus spoils!', '#ffd838'); sfx('rare');
     }
   }
   if (d.boss) {
-    drop(cx, cy, { kind:'gear', item: rollGear(d.tier, e.type === 'lich' ? 3 : 2) });
-    drop(cx, cy, { kind:'use', id:'elixir' });
+    lootTo(cx, cy, { kind:'gear', item: rollGear(d.tier, e.type === 'lich' ? 3 : 2) });
+    lootTo(cx, cy, { kind:'use', id:'elixir' });
     msg(`The ${d.name} has fallen!`, '#f8c838');
     if (e.type === 'titan') onTitanKilled(e);
     if (e.type === 'orc' && inWorld()) bossCD = 3 * 60 * 60;
     else if (dungeon) msg('Take the stairs back up to the surface.', '#c0a0ff');
     if (region) onRegionBossKilled(e);
   }
-  if (R() < 0.06) drop(cx, cy, { kind:'potion' });
-  else if (R() < (d.tier >= 2 ? 0.09 : 0.04)) drop(cx, cy, { kind:'use', id: R() < 0.5 ? 'mpot' : R() < 0.5 ? 'scroll' : 'elixir' });
+  if (R() < 0.06) lootTo(cx, cy, { kind:'potion' });
+  else if (R() < (d.tier >= 2 ? 0.09 : 0.04)) lootTo(cx, cy, { kind:'use', id: R() < 0.5 ? 'mpot' : R() < 0.5 ? 'scroll' : 'elixir' });
 }
 function gainXp(n) {
   if (typeof rift !== 'undefined' && rift && riftMod && riftMod.xp) n = Math.round(n * riftMod.xp);
@@ -461,9 +615,10 @@ function gainXp(n) {
   checkAchievements();
 }
 function hurtPlayer(e, mult = 1) {
+  if (spec) return;                                      // the admin observer is a ghost (spectator.js)
   const rMul = (typeof rift !== 'undefined' && rift && riftMod && riftMod.foeAtk) ? riftMod.foeAtk : 1;
   const bossMul = e.d.boss ? BOSS_DMG : 1;               // bosses hit harder (bots.js)
-  const dmg = Math.max(1, Math.round(e.d.atk * mult * rMul * bossMul * DIFF().dmg * (0.85 + R() * 0.3)) - def());
+  const dmg = Math.max(1, Math.round(e.d.atk * mult * rMul * bossMul * DIFF().dmg * (0.85 + R() * 0.3) * coverMul() * nightAtk()) - def());   // sandbag cover (build.js)
   p.hp -= dmg; p.hurtT = 50; addShake(4);
   const dx = p.x - e.x - (e.w - p.w) / 2, dy = p.y - e.y - (e.h - p.h) / 2, l = Math.hypot(dx, dy) || 1;
   p.kx = dx / l * 3; p.ky = dy / l * 3;
@@ -484,7 +639,8 @@ function respawn() {
   if (dungeon) exitDungeon();
   if (arena) leaveArena();
   if (region) leaveRegion();
-  p.x = 12 * T + 2; p.y = 24 * T + 2; p.hp = maxHp(); p.hurtT = 60; p.kx = p.ky = 0;
+  p.x = (12 + OX) * T + 2; p.y = 24 * T + 2; p.hp = maxHp(); p.hurtT = 60; p.kx = p.ky = 0;
+  p.reloadT = 0; p.ammo = maxAmmo(p.weapon);
   p.auto = false;                                     // don't let auto farm walk straight back into what killed you
   mode = 'play'; save(); startMusic();
 }
@@ -502,7 +658,7 @@ function addStack(kind, id, n = 1) {
   p.inv.push({ kind, id, count:n }); return true;
 }
 function addMat(id, n = 1) { return addStack('mat', id, n); }
-const canCarry = pk => pk.kind === 'gold' || pk.kind === 'potion' || p.inv.length < BAG
+const canCarry = pk => pk.kind === 'gold' || pk.kind === 'scrap' || pk.kind === 'potion' || p.inv.length < BAG
   || ((pk.kind === 'mat' || pk.kind === 'use') && p.inv.some(i => i.kind === pk.kind && i.id === pk.id));
 function collect(pk) {
   if (pk.kind === 'gold') {
@@ -510,6 +666,7 @@ function collect(pk) {
     pk.amt = Math.round(pk.amt * (1 + 0.2 * rank('gold') + gearBonus('greed') * 0.01 + titleBonus('gold') * 0.01) * rGoldMul);
     p.gold += pk.amt; float(pk.x, pk.y - 8, `+${pk.amt}G`, '#f8c838'); sfx('coin'); checkAchievements();
   }
+  else if (pk.kind === 'scrap') { p.scrap = (p.scrap || 0) + pk.amt; float(pk.x, pk.y - 8, `+${pk.amt} SCRAP`, '#c0c8d8'); sfx('coin'); }
   else if (pk.kind === 'potion') { p.potions++; msg('Found a Potion!', '#ff8080'); sfx('item'); }
   else if (pk.kind === 'use') {
     addStack('use', pk.id); msg(`Got ${CONSUMABLES[pk.id].name}!`, CONSUMABLES[pk.id].color); sfx('item');
@@ -553,17 +710,46 @@ function updatePlayer() {
   }
   if (p.hurtT > 0) p.hurtT--;
   if (p.cd > 0) p.cd--;
+  if (p.sprayResetT > 0 && --p.sprayResetT <= 0) p.sprayCount = 0;
+  if (p.reloadT > 0) {
+    if (--p.reloadT <= 0) {
+      p.ammo = maxAmmo(p.weapon);
+      sfx('bolt');
+      float(p.x + 6, p.y - 10, 'LOCK & LOAD!', '#58e858');
+    }
+  }
   if (p.atkT > 0) { p.atkT--; if (p.cls === 'knight' && !hasGun() && p.atkT <= SWING - 2 && p.atkT >= 3) swingHits(); }
-  if ((keys.Space || keys.KeyJ) && p.cd <= 0) attack();
+  if ((keys.Space || keys.KeyJ) && !build.on && p.cd <= 0 && p.reloadT <= 0) attack();   // Space places structures in build mode
   p.skillCd = p.skillCd.map(c => Math.max(0, c - 1));
   if (frame % 6 === 0) p.target = findTarget();
   if (p.spinT > 0) p.spinT--;
   if (p.critT > 0) p.critT--;
   if (p.elixirT > 0 && --p.elixirT % 8 === 0) parts.push({ x: p.x + ri(0, 12), y: p.y + 10, vx: 0, vy: -0.7, t: 16, c: '#d080ff' });
   if (p.buffT > 0 && --p.buffT % 6 === 0) parts.push({ x: p.x + ri(0, 12), y: p.y + 10, vx: 0, vy: -0.8, t: 18, c: '#ff9040' });
-  const inVillage = inWorld() && p.x < 26 * T;
+  const ptx = clamp(Math.floor((p.x + 6) / T), 0, MW - 1), pty = clamp(Math.floor((p.y + 6) / T), 0, MH - 1), curTile = map[pty][ptx];
+  if (p.rollT <= 0 && p.dashT <= 0) {
+    if (curTile === 'B') {                           // Barbed Wire entanglement: slows and bleeds
+      p.slowT = Math.max(p.slowT, 20);
+      if (frame % 35 === 0) {
+        const wdmg = Math.max(1, Math.round(maxHp() * 0.04));
+        p.hp = Math.max(1, p.hp - wdmg);
+        float(p.x + 6, p.y - 6, `-${wdmg} WIRE`, '#ff6060');
+        burst(p.x + 6, p.y + 8, '#c83030', 5); sfx('hit');
+      }
+    } else if (curTile === 'x') {                    // Toxic Biohazard puddle: slows and corrodes
+      p.slowT = Math.max(p.slowT, 25);
+      if (frame % 7 === 0) parts.push({ x: p.x + ri(0, 12), y: p.y + 10, vx: 0, vy: -0.6, t: 14, c: '#68f040' });
+      if (frame % 40 === 0) {
+        const tdmg = Math.max(1, Math.round(maxHp() * 0.05));
+        p.hp = Math.max(1, p.hp - tdmg);
+        float(p.x + 6, p.y - 6, `-${tdmg} TOXIC`, '#68f040');
+        burst(p.x + 6, p.y + 8, '#68f040', 6);
+      }
+    }
+  }
+  const inVillage = safeAt(p.x, p.y);              // base + grass field (when nothing is attacking)
   if (p.stairCD > 0) p.stairCD--;
-  else if (!p.auto || manual) {                       // auto farm never wanders through portals or stairs
+  else if (!p.auto || manual) {                       // auto farm never wanders through checkpoints or stairs
     const ch = map[Math.floor((p.y + 6) / T)][Math.floor((p.x + 6) / T)];
     if (ch === 'V') return startWarp(() => enterRift(1));
     if (ch === 'Z') { const tx = Math.floor((p.x + 6) / T), ty = Math.floor((p.y + 6) / T); return startWarp(() => usePortal(tx, ty)); }
@@ -578,12 +764,14 @@ function updatePlayer() {
   const regMul = titleBonus('regen') || 1;
   if (p.hp < maxHp() && frame % Math.max(2, Math.round((inVillage ? 6 : 150) / regMul)) === 0) p.hp++;
   if (p.mp < maxMp() && frame % Math.max(2, Math.round((inVillage ? 4 : p.cls === 'mage' ? 12 : 20) / regMul)) === 0) p.mp++;
+  if (inVillage && p.reloadT <= 0 && p.atkT <= 0 && p.ammo < maxAmmo(p.weapon) && frame % 30 === 0) p.ammo = maxAmmo(p.weapon);
 }
 function updateEnemies() {
   const pcx = p.x + 6, pcy = p.y + 6;
   for (const e of enemies) {
     if (e.dead) continue;
-    if (!e.d.world && (Math.abs(e.x - p.x) > VW + 64 || Math.abs(e.y - p.y) > VH + 64)) continue;   // sleep when far away (world boss never sleeps)
+    if (e.horde) { hordeAI(e); if (mode !== 'play') return; continue; }   // invasion horde: swims rivers, smashes walls (invasion.js)
+    if (!e.d.world && (Math.abs(e.x - p.x) > VW + 64 || Math.abs(e.y - p.y) > VH + 64) && !specNear(e)) continue;   // sleep when far away (world boss never sleeps)
     if (e.flash > 0) e.flash--;
     if (e.d.dummy) { if (e.stun > 0) e.stun--; continue; }
     if (e.frozen > 0) { e.frozen--; continue; }
@@ -648,9 +836,18 @@ function updateEnemies() {
         }
       }
     }
+    const etx = clamp(Math.floor(ex / T), 0, MW - 1), ety = clamp(Math.floor(ey / T), 0, MH - 1), eTile = map[ety][etx];
+    if (eTile === 'B' && frame % 40 === 0) {         // Zombies snagged on Barbed Wire take bleed damage
+      const wdmg = Math.max(2, Math.round(e.d.hp * (e.d.boss ? 0.01 : 0.07)));
+      e.hp -= wdmg; e.flash = 6;
+      float(ex, e.y - 4, `-${wdmg}`, '#ff6060'); burst(ex, ey, '#c83030', 4);
+      if (e.hp <= 0) { killEnemy(e); continue; }
+    } else if (eTile === 'x' && frame % 10 === 0) {
+      parts.push({ x: ex + ri(-5, 5), y: ey + 4, vx: 0, vy: -0.5, t: 12, c: '#68f040' });
+    }
     const rfSpd = (typeof rift !== 'undefined' && rift && riftMod && riftMod.foeSpd) ? riftMod.foeSpd : 1;
-    const spd = e.d.spd * (e.enraged ? 1.25 : 1) * rfSpd;
-    const engaged = (arena || (typeof rift !== 'undefined' && rift) || d < e.d.aggro) && (dungeon || region || arena || (typeof rift !== 'undefined' && rift) || (tg.bot ? tg.bot.x : p.x) > 26 * T - 8);
+    const nk = nightK(), spd = e.d.spd * (e.enraged ? 1.25 : 1) * (eTile === 'B' ? 0.5 : 1) * buildSlow(e) * rfSpd * (1 + NIGHT.spd * nk);
+    const engaged = (arena || (typeof rift !== 'undefined' && rift) || d < e.d.aggro * (1 + NIGHT.aggro * nk)) && (dungeon || region || arena || (typeof rift !== 'undefined' && rift) || !(tg.bot ? inBasePx(tg.bot.x + 8, tg.bot.y) : safeAt(p.x + 8, p.y)));
     if (engaged && e.d.ranged) {                     // casters keep their distance and shoot
       if (--e.shootCD <= 0) fireEnemy(e, dx / d, dy / d);
       const want = e.d.boss ? 80 : 100, s = d < want - 20 ? -1 : d > want + 20 ? 1 : 0;
@@ -669,6 +866,11 @@ function updateEnemies() {
   enemies = enemies.filter(e => !e.dead);
 }
 function updatePickups() {
+  if (spec) {                                            // nobody picks things up for the ghost; drops just age away
+    for (const pk of pickups) { pk.t++; pk.life--; pk.x += pk.vx; pk.y += pk.vy; pk.vx *= 0.88; pk.vy *= 0.88; }
+    pickups = pickups.filter(pk => !pk.gone && pk.life > 0);
+    return;
+  }
   const cx = p.x + 6, cy = p.y + 6;
   for (const pk of pickups) {
     pk.t++; pk.life--; pk.x += pk.vx; pk.y += pk.vy; pk.vx *= 0.88; pk.vy *= 0.88;
@@ -778,13 +980,13 @@ function spawner() {
   if (arena) return updateArena();
   if (dungeon) return;                                  // crypt floors don't respawn
   if (region) return regionSpawner();                   // map packs use their own spawn table
-  if (frame % 120 === 0) {
+  if (frame % 70 === 0) {                               // refilled faster than before (every ~1.2 s)
     for (const z of ZONES) for (const [type, n] of z.mobs) {
-      if (enemies.filter(e => e.type === type && e.zone === z.name).length < n) spawnOne(type, z, false);
+      if (enemies.filter(e => e.type === type && e.zone === z.name).length < zombieCount(n)) spawnOne(type, z, false);
     }
   }
   if (bossCD > 0) bossCD--;
-  else if (!enemies.some(e => e.type === 'orc')) { enemies.push(mkEnemy('orc', 80 * T - 4, 24 * T, 'Old Ruins')); bossCD = 1e9; }
+  else if (!enemies.some(e => e.type === 'orc')) { enemies.push(mkEnemy('orc', (80 + OX) * T - 4, 24 * T, 'Old Ruins')); bossCD = 1e9; }
 }
 
 function update() {
@@ -798,14 +1000,22 @@ function update() {
     camy = (MH * T - VH) / 2 + Math.sin(frame * 0.003) * 120;
     return;
   }
+  if (!(spec && spec.paused)) invasionWatch();
   if (mode !== 'play') return;
-  if (warp) { tickWarp(); return; }                       // the world holds still while a portal warp plays
+  if (warp) { tickWarp(); return; }                       // the world holds still while the travel fade plays
   for (const m of msgs) m.t--; msgs = msgs.filter(m => m.t > 0);
   if (banner && --banner.t <= 0) banner = null;
-  updatePlayer();
-  updatePet();
+  if (spec) {                                            // admin observer: a ghost camera instead of a soldier (spectator.js)
+    updateSpectator();
+    if (spec.paused) return;
+  } else {
+    updatePlayer();
+    updatePet();
+  }
   updateBots();
   updateEnemies();
+  updateBuilds();
+  nightWatch();
   if (mode !== 'play') return;
   updateProjs();
   updateEprojs();
@@ -816,11 +1026,12 @@ function update() {
   if (z !== zoneName) {
     zoneName = z; banner = { txt: z, t: 150 };
     const q = storyQ();
-    if (p.sq && q && q.type === 'visit' && q.target === z && p.sprog < 1) { p.sprog = 1; msg('Quest complete! Return to the Elder.', '#58d858'); sfx('quest'); }
+    if (!spec && p.sq && q && q.type === 'visit' && q.target === z && p.sprog < 1) { p.sprog = 1; msg('Quest complete! Return to the Elder.', '#58d858'); sfx('quest'); }
   }
   if (frame % 30 === 0) checkAchievements();
-  if (frame % 600 === 0) save();
+  if (frame % 600 === 0 && !spec) save();
   if (frame % 6 === 0) { syncMini(); revealAround(); }
-  camx += (p.x + 6 - VW / 2 - camx) * 0.15; camy += (p.y + 6 - VH / 2 - camy) * 0.15;
+  if (spec) return;                                      // the observer steers the camera itself
+  camx +=(p.x + 6 - VW / 2 - camx) * 0.15; camy += (p.y + 6 - VH / 2 - camy) * 0.15;
   camx = clamp(camx, 0, MW * T - VW); camy = clamp(camy, 0, MH * T - VH);
 }

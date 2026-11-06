@@ -1,0 +1,4065 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS GAME OPS — ศูนย์บริหารและจัดการเกม (Game Management Dashboard)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090a10;
+      --bg-card: #11131f;
+      --bg-card-hover: #181b2c;
+      --bg-card-active: #1f233a;
+      --bg-input: #0c0e17;
+      --border-subtle: #1e2238;
+      --border-accent: #2e3558;
+      --cyan: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.25);
+      --amber: #ffb800;
+      --amber-glow: rgba(255, 184, 0, 0.25);
+      --emerald: #00e676;
+      --emerald-glow: rgba(0, 230, 118, 0.25);
+      --crimson: #ff2a5f;
+      --crimson-glow: rgba(255, 42, 95, 0.25);
+      --purple: #b388ff;
+      --purple-glow: rgba(179, 136, 255, 0.25);
+      --text-main: #e6ebff;
+      --text-muted: #8b92b2;
+      --text-dim: #5c6280;
+      --font-display: 'Chakra Petch', sans-serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+      --font-pixel: 'Press Start 2P', monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+      --header-height: 65px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(255, 42, 95, 0.04) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg-dark); }
+    ::-webkit-scrollbar-thumb { background: var(--border-accent); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+    /* Top Navigation Header */
+    header.top-nav {
+      height: var(--header-height);
+      background: rgba(17, 19, 31, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #00f0ff, #7928ca);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+    .brand-icon svg { width: 24px; height: 24px; fill: #fff; }
+    .brand-text h1 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-text h1 span.badge {
+      font-size: 10px;
+      font-family: var(--font-pixel);
+      background: rgba(0, 240, 255, 0.15);
+      color: var(--cyan);
+      border: 1px solid var(--cyan);
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0;
+    }
+    .brand-text p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: var(--font-display);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.9); }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .btn-primary {
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(0, 114, 255, 0.3);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 4px 15px rgba(0, 114, 255, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn-accent {
+      background: linear-gradient(135deg, #ff9900, #ff5500);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(255, 85, 0, 0.3);
+    }
+    .btn-accent:hover {
+      box-shadow: 0 4px 15px rgba(255, 85, 0, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      background: transparent;
+      border-color: var(--border-accent);
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .btn-danger {
+      background: rgba(255, 42, 95, 0.15);
+      border-color: var(--crimson);
+      color: var(--crimson);
+    }
+    .btn-danger:hover {
+      background: var(--crimson);
+      color: #fff;
+    }
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    /* Live Telemetry and Remote Control Bar */
+    .live-bridge-panel {
+      background: linear-gradient(145deg, #0d1222, #13172e);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .live-bridge-panel.connected {
+      border-color: var(--cyan);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.15);
+    }
+    .live-bridge-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--emerald), var(--purple));
+    }
+    .live-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .live-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: var(--font-display);
+      font-weight: 700;
+    }
+    .live-badge.online {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+    }
+    .live-badge.offline {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-accent);
+      color: var(--text-dim);
+    }
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .telemetry-card {
+      background: rgba(8, 10, 18, 0.85);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .telemetry-card .t-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+    }
+    .telemetry-card .t-val {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: var(--font-display);
+      color: #fff;
+    }
+    .t-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: #1b1e33;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .t-bar-fill {
+      height: 100%;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+    .live-actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Main Container & Layout */
+    .app-layout {
+      display: flex;
+      flex: 1;
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: 250px;
+      background: rgba(14, 16, 26, 0.95);
+      border-right: 1px solid var(--border-subtle);
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      position: sticky;
+      top: var(--header-height);
+      height: calc(100vh - var(--header-height));
+      overflow-y: auto;
+      align-self: flex-start;
+      z-index: 90;
+    }
+    .nav-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      padding: 12px 12px 6px;
+      font-family: var(--font-display);
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    .nav-item svg { width: 18px; height: 18px; }
+    .nav-item:hover {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+    .nav-item.active {
+      background: rgba(0, 240, 255, 0.1);
+      border-color: rgba(0, 240, 255, 0.3);
+      color: var(--cyan);
+      box-shadow: inset 3px 0 0 var(--cyan);
+    }
+    .nav-item .tag {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--bg-card-active);
+      color: var(--text-dim);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .nav-item.active .tag {
+      background: var(--cyan);
+      color: #000;
+      font-weight: 700;
+    }
+
+    /* Content Area */
+    main.content {
+      flex: 1;
+      padding: 28px 32px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Section Header */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    /* Admin Game Matrix Table */
+    .admin-table-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .admin-table th {
+      background: rgba(9, 10, 16, 0.7);
+      padding: 14px 18px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    .admin-table td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    .admin-table tr:last-child td { border-bottom: none; }
+    .admin-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Storage Health Monitor */
+    .storage-bar-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .storage-progress {
+      height: 12px;
+      background: #090a12;
+      border-radius: 6px;
+      display: flex;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+    .storage-segment {
+      height: 100%;
+      transition: width 0.3s;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+    .section-title span.desc {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+    }
+
+    /* KPI Stats Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-accent);
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .kpi-cyan::before { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+    .kpi-amber::before { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+    .kpi-crimson::before { background: var(--crimson); box-shadow: 0 0 10px var(--crimson); }
+    .kpi-emerald::before { background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
+    .kpi-purple::before { background: var(--purple); box-shadow: 0 0 10px var(--purple); }
+
+    .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .kpi-header svg { width: 18px; height: 18px; }
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .kpi-footer {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    /* Hero Spotlight Grid */
+    .spotlight-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 1024px) {
+      .spotlight-grid { grid-template-columns: 1fr; }
+    }
+
+    .spotlight-card {
+      background: linear-gradient(145deg, #121526, #161a30);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .spotlight-card::after {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .spotlight-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .spotlight-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .spotlight-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      max-width: 650px;
+    }
+
+    /* Operative Quick Badge */
+    .op-quick-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: rgba(9, 10, 16, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+    .op-stat-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 90px;
+    }
+    .op-stat-item .label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-family: var(--font-display);
+    }
+    .op-stat-item .val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: var(--font-display);
+    }
+
+    /* Quick Launch Bar */
+    .spotlight-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Side Mini Cards */
+    .side-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .mini-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .mini-card:hover {
+      border-color: var(--border-accent);
+    }
+    .mini-card h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .mini-card p {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    /* Games Grid */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .game-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .game-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-card);
+    }
+    .game-cover {
+      height: 150px;
+      background: #171a2b;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .game-cover-art {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.85;
+      transition: transform 0.3s;
+    }
+    .game-card:hover .game-cover-art {
+      transform: scale(1.03);
+      opacity: 1;
+    }
+    .game-cover-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      font-size: 11px;
+      font-family: var(--font-display);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .game-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .game-body h3 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .game-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .game-tag {
+      font-size: 10px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-display);
+    }
+    .game-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+      flex: 1;
+    }
+    .game-footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Save Editor Section */
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) {
+      .editor-layout { grid-template-columns: 1fr; }
+    }
+
+    .editor-sidebar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .op-avatar-box {
+      width: 100%;
+      height: 140px;
+      background: radial-gradient(circle, #252a48 0%, #101222 100%);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .op-avatar-icon {
+      font-size: 42px;
+      filter: drop-shadow(0 0 12px var(--cyan));
+    }
+    .op-avatar-class {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--cyan);
+      margin-top: 6px;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .editor-main {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Form Fields */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-family: var(--font-display);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .form-control {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      transition: border-color 0.15s;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+    select.form-control {
+      cursor: pointer;
+    }
+    select.form-control option {
+      background: #11131f;
+      color: #fff;
+    }
+    input[type="range"] {
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    /* Quick Cheat Buttons Bar */
+    .cheat-box {
+      background: rgba(255, 184, 0, 0.05);
+      border: 1px solid rgba(255, 184, 0, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .cheat-box-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--amber);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cheat-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Armory & Weapon Cards */
+    .armory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .weapon-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .weapon-card:hover {
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+    }
+    .weapon-canvas-box {
+      height: 60px;
+      background: #090a14;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .weapon-canvas-box canvas {
+      image-rendering: pixelated;
+    }
+    .weapon-title {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .weapon-stats-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .weapon-stats-list span b {
+      color: var(--text-main);
+    }
+
+    /* Bestiary Cards */
+    .bestiary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 18px;
+    }
+    .monster-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      position: relative;
+      border-left: 4px solid var(--crimson);
+    }
+    .monster-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .threat-tag {
+      font-size: 10px;
+      font-family: var(--font-pixel);
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 42, 95, 0.15);
+      color: var(--crimson);
+    }
+    .monster-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    /* Save Slots Box */
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .slot-card {
+      background: var(--bg-card);
+      border: 1px dashed var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .slot-card.filled {
+      border-style: solid;
+      border-color: var(--border-accent);
+    }
+    .slot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--cyan);
+    }
+    .slot-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      min-height: 48px;
+    }
+
+    /* Interactive Game Modal Player */
+    #gameModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 5, 10, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #gameModal.open {
+      display: flex;
+    }
+    .modal-shell {
+      width: 100%;
+      max-width: 1100px;
+      height: 90vh;
+      background: #090a14;
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 240, 255, 0.15);
+    }
+    .modal-header {
+      background: #111322;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .modal-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-frame-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+    }
+    .modal-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #000;
+    }
+    .modal-footer {
+      background: #0d0f1b;
+      border-top: 1px solid var(--border-subtle);
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Toast Notification */
+    #toastContainer {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: #161a2e;
+      border: 1px solid var(--cyan);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
+      font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+    }
+    .toast-success { border-color: var(--emerald); }
+    .toast-error { border-color: var(--crimson); }
+    @keyframes toastIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Activity Log Console */
+    .log-console {
+      background: #090a12;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      padding: 12px;
+      height: 140px;
+      overflow-y: auto;
+      color: #7f89a9;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-line { display: flex; gap: 8px; }
+    .log-time { color: var(--text-dim); }
+    .log-tag { color: var(--cyan); font-weight: bold; }
+    .log-msg { color: #cfd6f0; }
+
+    /* Dialog/Modal general */
+    .simple-dialog {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .simple-dialog.open { display: flex; }
+    .dialog-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Admin Login Gatekeeper Screen */
+    #adminLoginGate {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 35%, #18203c 0%, #06070e 85%);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(25px);
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    #adminLoginGate.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 450px;
+      background: rgba(17, 19, 31, 0.96);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 240, 255, 0.12);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      animation: loginBoxIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes loginBoxIn {
+      from { transform: scale(0.95) translateY(10px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .login-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--crimson), var(--amber), var(--cyan));
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-icon-wrap {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, rgba(255, 42, 95, 0.15), rgba(0, 240, 255, 0.25));
+      border: 1px solid var(--cyan);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 25px var(--cyan-glow);
+    }
+    .login-icon-wrap svg { width: 32px; height: 32px; fill: var(--cyan); }
+    .login-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .login-error {
+      background: rgba(255, 42, 95, 0.15);
+      border: 1px solid var(--crimson);
+      color: #ff94b0;
+      font-size: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .login-error.show { display: flex; animation: shake 0.3s; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .login-hint {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(255, 184, 0, 0.06);
+      border: 1px solid rgba(255, 184, 0, 0.2);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: #e6c888;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    /* ---- Live base operations (structures, tanks, BTR patrols) ---- */
+    .base-ops { background: var(--bg-card); border: 1px solid var(--border-accent); border-radius: 12px; padding: 16px; margin-bottom: 22px; }
+    .base-ops.offline .base-ops-body { opacity: .45; }
+    .base-ops-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .base-ops-status { font-size: 12px; color: var(--text-dim); }
+    .base-ops-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .base-ops-card { background: rgba(255,255,255,.02); border: 1px solid var(--border-accent); border-radius: 10px; padding: 12px; min-width: 0; }
+    .base-ops-card h4 { margin: 0 0 8px; font-size: 13px; color: var(--text-muted); font-weight: 700; }
+    .veh-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.05); font-size: 12px; }
+    .veh-row:first-of-type { border-top: 0; }
+    .veh-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .veh-sub { grid-column: 1 / -1; font-size: 11px; color: var(--text-dim); }
+    .veh-bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .veh-bar > div { height: 100%; }
+    .veh-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+    .veh-badge.ok { background: rgba(0,230,118,.14); color: var(--emerald); }
+    .veh-badge.bad { background: rgba(255,42,95,.16); color: #ff94b0; }
+    .veh-badge.work { background: rgba(255,184,0,.15); color: var(--amber); }
+    .veh-badge.move { background: rgba(0,240,255,.12); color: var(--cyan); }
+    .struct-list { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 12px; }
+    .struct-list span:nth-child(even) { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-main); }
+    .base-ops-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    /* ---- Live tactical map ---- */
+    .tac-map { background: var(--bg-card); border: 1px solid var(--border-accent); border-radius: 12px; padding: 16px; margin-bottom: 22px; }
+    .tac-map-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #0b0d16; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-accent); }
+    .tac-map-wrap canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+    .tac-map-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 13px; text-align: center; padding: 16px; }
+    .tac-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 11px; color: var(--text-muted); }
+    .tac-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+    .tac-toggles { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; color: var(--text-muted); }
+    .inv-ctl { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin: 0 0 16px;
+      padding: 12px 16px; border: 1px solid rgba(255, 80, 80, .35); border-radius: 10px; background: rgba(255, 60, 60, .06); }
+    .inv-ctl.raiding { border-color: var(--crimson); background: rgba(255, 60, 60, .14); }
+    .inv-ctl-title { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+    .inv-ctl-status { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .inv-ctl-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+    .inv-ctl-btns button:disabled { opacity: .45; cursor: not-allowed; }
+    .tac-toggles label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+    /* ---- Situation picture: roster, selected unit, situation log ---- */
+    .sit-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; }
+    @media (max-width: 1000px) { .sit-grid { grid-template-columns: minmax(0, 1fr); } }
+    .sit-card { background: var(--bg-card); border: 1px solid var(--border-accent); border-radius: 12px; padding: 14px; min-width: 0; }
+    .sit-card h3 { margin: 0 0 10px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .sit-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .sit-chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border-accent); background: transparent; color: var(--text-muted); cursor: pointer; }
+    .sit-chip.on { background: rgba(0,240,255,.12); color: var(--cyan); border-color: var(--cyan); }
+    .sit-list { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .unit-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 7px 8px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; font-size: 12px; }
+    .unit-row:hover { background: rgba(255,255,255,.03); }
+    .unit-row.sel { border-color: var(--cyan); background: rgba(0,240,255,.07); }
+    .unit-ico { font-size: 14px; text-align: center; }
+    .unit-name { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .unit-zone { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+    .unit-act { grid-column: 2 / -1; color: var(--text-muted); font-size: 11px; }
+    .unit-hp { grid-column: 2 / -1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden; }
+    .unit-hp > div { height: 100%; }
+    .sel-card { border: 1px solid var(--cyan); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: rgba(0,240,255,.05); font-size: 12px; }
+    .sel-card .k { color: var(--text-dim); }
+    .ev-row { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; padding: 6px 8px; border-left: 3px solid var(--border-accent); background: rgba(255,255,255,.02); border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .ev-row:hover { background: rgba(255,255,255,.05); }
+    .ev-time { color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 11px; }
+    .ev-row.new { animation: evIn .6s ease-out; }
+    @keyframes evIn { from { background: rgba(0,240,255,.18); } to { background: rgba(255,255,255,.02); } }
+    .tac-tip { position: absolute; pointer-events: none; z-index: 3; background: rgba(8,10,18,.94); border: 1px solid var(--border-accent); border-radius: 8px; padding: 7px 10px; font-size: 12px; max-width: 260px; display: none; box-shadow: 0 6px 20px rgba(0,0,0,.5); }
+    .tac-tip b { display: block; margin-bottom: 2px; }
+    .tac-map-wrap canvas { cursor: crosshair; }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== ADMIN LOGIN GATEKEEPER ==================== -->
+  <div id="adminLoginGate">
+    <div class="login-box">
+      <div class="login-header">
+        <div class="login-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+        </div>
+        <h2 class="login-title">NEXUS COMMAND</h2>
+        <p class="login-subtitle">ระบบยืนยันตัวตนเฉพาะผู้ดูแลระบบ (Admin Clearance Required)</p>
+      </div>
+
+      <div class="login-error" id="loginErrorMsg">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="loginErrorText">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+      </div>
+
+      <form id="adminLoginForm" onsubmit="handleAdminLogin(event)" style="display:flex; flex-direction:column; gap:16px;">
+        <div class="form-group">
+          <label for="adminUsernameInput">ชื่อผู้ดูแลระบบ (Admin Username)</label>
+          <input type="text" class="form-control" id="adminUsernameInput" placeholder="admin" required autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="adminPasswordInput">รหัสผ่านลับ (Password)</label>
+          <input type="password" class="form-control" id="adminPasswordInput" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text-muted);">
+            <input type="checkbox" id="rememberAdmin" checked style="accent-color:var(--cyan); width:16px; height:16px;">
+            <span>จดจำการเข้าสู่ระบบในเครื่องนี้</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="padding:12px; font-size:14px; margin-top:6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          เข้าสู่ระบบศูนย์ควบคุม (Authorize Access)
+        </button>
+      </form>
+
+      <div class="login-hint">
+        <div>🔑 <b>ข้อมูลเข้าสู่ระบบเริ่มต้นสำหรับ Admin:</b></div>
+        <div>• <b>Username:</b> <code style="color:var(--cyan);">admin</code></div>
+        <div>• <b>Password:</b> <code style="color:var(--cyan);">admin123</code></div>
+        <div style="color:var(--text-dim); font-size:11px; margin-top:4px;">(สามารถเปลี่ยนรหัสผ่านได้ในเมนูตั้งค่าหลังเข้าสู่ระบบ)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Navigation Header -->
+  <header class="top-nav">
+    <div class="brand-group">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>NEXUS GAME OPS <span class="badge">ADMIN</span></h1>
+        <p>ระบบศูนย์กลางบริหารและจัดการเกมประจำเครื่อง (Restricted Access)</p>
+      </div>
+    </div>
+
+    <div class="header-status">
+      <div class="status-pill" id="adminUserPill" style="border-color: rgba(0, 240, 255, 0.35);">
+        <span style="font-size:13px;">🛡️</span>
+        <span style="font-size:12px;">Admin: <b id="adminUserDisplay" style="color:var(--cyan);">admin</b></span>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span id="serverStatusText">Local Host: 8123 (Online)</span>
+      </div>
+      <div class="status-pill" id="liveGamePill">
+        <span class="status-dot" id="liveGameDot" style="background:#5c6280; box-shadow:none;"></span>
+        <span id="liveGameText" style="color:var(--text-muted);">เกม: ออฟไลน์ (รอเปิดเกม)</span>
+      </div>
+      <div class="status-pill" style="display: none;" id="clockBadge">
+        <span id="liveClock">--:--:--</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" id="btnQuickBackup" title="ส่งออกไฟล์เซฟทั้งหมดทันที">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        สำรองเซฟด่วน
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="openGameModal('rpg.html', 'OPERATION: BIOHAZARD')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        เล่น BIOHAZARD ทันที
+      </button>
+      <button class="btn btn-outline btn-sm btn-danger" onclick="adminLogout()" title="ออกจากระบบ Admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        ออกจากระบบ
+      </button>
+    </div>
+  </header>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="nav-label">เมนูบริหาร</div>
+      <a class="nav-item active" data-tab="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        ภาพรวมระบบ
+      </a>
+      <a class="nav-item" data-tab="map">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        แผนที่ยุทธการสด
+      </a>
+      <a class="nav-item" data-tab="games">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="17" cy="10" r="1"/><circle cx="15" cy="13" r="1"/></svg>
+        คลังเกม & เปิดเล่น
+        <span class="tag" id="gameCountTag">3</span>
+      </a>
+      <a class="nav-item" data-tab="save-editor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        จัดการเซฟ & ตัวละคร
+      </a>
+      <a class="nav-item" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        ตั้งค่า & ปรับสมดุล
+      </a>
+      
+      <div class="nav-label">คลังข้อมูลและสินทรัพย์</div>
+      <a class="nav-item" data-tab="armory">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        คลังสรรพาวุธ & มอนสเตอร์
+      </a>
+      <a class="nav-item" data-tab="backups">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        สล็อตเซฟ & กู้คืน
+      </a>
+
+      <div style="margin-top: auto; padding: 12px; border-top: 1px solid var(--border-subtle); display:flex; flex-direction:column; gap:8px;">
+        <button class="btn btn-outline btn-sm" style="width: 100%;" onclick="openGameModal('models/index.html', '3D / Pixel Model Gallery')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          เปิด Model Gallery
+        </button>
+        <button class="btn btn-outline btn-sm btn-danger" style="width: 100%;" onclick="adminLogout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          ออกจากระบบ (Logout)
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Panes -->
+    <main class="content">
+
+      <!-- ==================== TAB 1: OVERVIEW ==================== -->
+      <section class="tab-pane active" id="tab-overview">
+        <div class="section-header">
+          <div class="section-title">
+            ภาพรวมการบริหารเกมและระบบ (Game Operations Overview)
+            <span class="desc">ศูนย์กลางควบคุมสถานะ สภาพแวดล้อมระบบ ฐานข้อมูลเซฟ และคลังเกมทั้งหมด</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="refreshAllData()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              รีเฟรชข้อมูล
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="openAddGameDialog()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              + เพิ่มเกมใหม่
+            </button>
+          </div>
+        </div>
+
+        <!-- zombie invasion control (CMD_TRIGGER_INVASION / CMD_STOP_INVASION, status from telemetry.raid) -->
+        <div class="inv-ctl">
+          <div class="inv-ctl-info">
+            <div class="inv-ctl-title">🧟 ซอมบี้บุกฐาน (Zombie Invasion)</div>
+            <div class="inv-ctl-status" data-inv-status>เปิดเกม OPERATION: BIOHAZARD เพื่อสั่งการ</div>
+          </div>
+          <div class="inv-ctl-btns">
+            <button class="btn btn-danger btn-sm" data-inv-start onclick="sendGameCmd('CMD_TRIGGER_INVASION')">🚨 สั่งซอมบี้บุก (เปิดไซเรน)</button>
+            <button class="btn btn-danger btn-sm" data-inv-start onclick="sendGameCmd('CMD_TRIGGER_INVASION', { now: true })">⚡ บุกทันที</button>
+            <button class="btn btn-outline btn-sm" data-inv-stop onclick="sendGameCmd('CMD_STOP_INVASION')">🛑 ยุติการบุก</button>
+          </div>
+        </div>
+
+        <!-- System & Operations KPI Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-cyan">
+            <div class="kpi-header">
+              <span>เกมที่ดูแลในระบบ</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>
+            </div>
+            <div class="kpi-value" id="kpiTotalGames">3</div>
+            <div class="kpi-footer" id="kpiGamesBreakdown">RPG 1 · Arcade 1 · Tool 1</div>
+          </div>
+          <div class="kpi-card kpi-emerald">
+            <div class="kpi-header">
+              <span>สถานะเซิร์ฟเวอร์ Local</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            </div>
+            <div class="kpi-value" style="font-size:22px; color:var(--emerald);">PORT 8123</div>
+            <div class="kpi-footer">HTTP No-Cache Server · ปกติ</div>
+          </div>
+          <div class="kpi-card kpi-amber">
+            <div class="kpi-header">
+              <span>พื้นที่ฐานข้อมูลเซฟ</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <div class="kpi-value" id="kpiTotalStorage">0 KB</div>
+            <div class="kpi-footer" id="kpiStorageHealth">ความสมบูรณ์ฐานข้อมูล: 100%</div>
+          </div>
+          <div class="kpi-card kpi-purple">
+            <div class="kpi-header">
+              <span>สล็อตสำรองข้อมูลระบบ</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            </div>
+            <div class="kpi-value" id="kpiActiveSnapshots">0 / 3</div>
+            <div class="kpi-footer">Snapshot Slots พร้อมกู้คืน</div>
+          </div>
+          <div class="kpi-card kpi-crimson">
+            <div class="kpi-header">
+              <span>สิทธิ์การควบคุมระบบ</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="kpi-value" style="font-size:20px; color:#ff94b0;">SUPERADMIN</div>
+            <div class="kpi-footer">Admin Clearance Level 5</div>
+          </div>
+        </div>
+
+        <!-- Live Base Operations (from the running game via the NEXUS bridge) -->
+        <div class="base-ops offline" id="baseOps">
+          <div class="base-ops-head">
+            <div class="section-title" style="font-size:16px; margin:0;">
+              🏗️ ปฏิบัติการฐานทัพสด (Live Base Operations)
+              <span class="desc">สิ่งปลูกสร้าง · รถถัง M1A1 · หน่วยลาดตระเวน BTR-80 · รถกู้ภัย — อัปเดตทุก 1 วินาทีเมื่อเปิดเกม</span>
+            </div>
+            <div class="base-ops-status" id="baseOpsStatus">เกมออฟไลน์ — เปิดเกมเพื่อดูสถานะสด</div>
+          </div>
+          <div class="base-ops-body">
+            <div class="base-ops-grid">
+              <div class="base-ops-card">
+                <h4>🔩 ทรัพยากร & สิ่งปลูกสร้าง</h4>
+                <div class="struct-list" id="baseOpsStructs">
+                  <span>เศษเหล็ก (Scrap)</span><span>--</span>
+                  <span>สิ่งปลูกสร้างทั้งหมด</span><span>--</span>
+                </div>
+              </div>
+              <div class="base-ops-card">
+                <h4>🛡️ รถถัง M1A1 Abrams</h4>
+                <div id="baseOpsTanks"><div class="veh-sub">--</div></div>
+              </div>
+              <div class="base-ops-card">
+                <h4>🚙 หน่วยลาดตระเวน BTR-80</h4>
+                <div id="baseOpsBtrs"><div class="veh-sub">--</div></div>
+              </div>
+            </div>
+            <div class="base-ops-actions">
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_ADD_SCRAP', { amount: 100 })">🔩 +100 เศษเหล็ก</button>
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_ADD_SCRAP', { amount: 1000 })">🔩 +1,000 เศษเหล็ก</button>
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_REPAIR_VEHICLES')">🔧 ซ่อมยานพาหนะทุกคันทันที</button>
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_LAUNCH_PATROL', { call: 'ALPHA' })">🚙 ส่ง ALPHA ออกลาดตระเวน</button>
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_LAUNCH_PATROL', { call: 'BRAVO' })">🚙 ส่ง BRAVO ออกลาดตระเวน</button>
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_SEND_QRF', { call: 'ALPHA' })">🚑 ส่งกำลังเสริม (QRF) ช่วย ALPHA</button>
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_SEND_QRF', { call: 'BRAVO' })">🚑 ส่งกำลังเสริม (QRF) ช่วย BRAVO</button>
+              <button class="btn btn-danger btn-sm" onclick="clearAllStructures()">🏚️ รื้อสิ่งปลูกสร้างทั้งหมด</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Management Matrix Table -->
+        <div class="section-title" style="font-size: 16px; margin-bottom: 12px;">
+          🎮 ทะเบียนและการจัดการคลังเกม (Game Portfolio Management)
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>เกม / ไตเติล</th>
+                <th>ประเภท (Category)</th>
+                <th>เทคโนโลยี (Engine)</th>
+                <th>สถานะระบบเซฟ (Save State)</th>
+                <th>สถานะการทำงาน (Runtime)</th>
+                <th style="text-align: right;">การจัดการด่วน</th>
+              </tr>
+            </thead>
+            <tbody id="adminGamesTableBody">
+              <tr>
+                <td>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:22px;">☣️</span>
+                    <div>
+                      <b style="color:#fff;">OPERATION: BIOHAZARD</b>
+                      <div style="font-size:11px; color:var(--text-dim);">rpg.html · v2.5</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="game-tag" style="color:var(--crimson); border-color:rgba(255,42,95,0.3);">Action RPG</span></td>
+                <td>HTML5 Canvas + Pure JS</td>
+                <td><span id="adminBiohazardSaveStatus" style="color:var(--emerald);">ตรวจพบเซฟ</span></td>
+                <td><span class="live-badge online" style="font-size:10px; padding:2px 8px;">พร้อมให้บริการ</span></td>
+                <td style="text-align: right;">
+                  <button class="btn btn-primary btn-sm" onclick="openGameModal('rpg.html', 'OPERATION: BIOHAZARD')">เปิดเล่น</button>
+                  <button class="btn btn-outline btn-sm" onclick="switchTab('save-editor')">จัดการเซฟ</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:22px;">🏃‍♂️</span>
+                    <div>
+                      <b style="color:#fff;">Moonlit Run</b>
+                      <div style="font-size:11px; color:var(--text-dim);">moonlit_run.html · v1.0</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="game-tag" style="color:var(--amber); border-color:rgba(255,184,0,0.3);">Arcade Platformer</span></td>
+                <td>8-Bit Pixel Canvas</td>
+                <td><span style="color:var(--text-muted);">Session Based</span></td>
+                <td><span class="live-badge online" style="font-size:10px; padding:2px 8px;">พร้อมให้บริการ</span></td>
+                <td style="text-align: right;">
+                  <button class="btn btn-accent btn-sm" onclick="openGameModal('moonlit_run.html', 'Moonlit Run')">เปิดเล่น</button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:22px;">🎨</span>
+                    <div>
+                      <b style="color:#fff;">Model & Asset Gallery</b>
+                      <div style="font-size:11px; color:var(--text-dim);">models/index.html · 54 Models</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="game-tag" style="color:var(--cyan); border-color:rgba(0,240,255,0.3);">Asset Tool</span></td>
+                <td>Sprite / Pixel Inspector</td>
+                <td><span style="color:var(--text-muted);">Static Assets</span></td>
+                <td><span class="live-badge online" style="font-size:10px; padding:2px 8px;">พร้อมให้บริการ</span></td>
+                <td style="text-align: right;">
+                  <button class="btn btn-outline btn-sm" onclick="openGameModal('models/index.html', '3D / Pixel Model Gallery')">เปิดชม</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Storage & Admin Quick Tools Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+          <!-- Storage Health -->
+          <div class="storage-bar-group">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:#fff;">
+                💾 การกระจายตัวของพื้นที่จัดเก็บข้อมูล (Data Distribution)
+              </span>
+              <span id="storageUsedPct" style="font-size:12px; color:var(--cyan); font-family:var(--font-display); font-weight:bold;">0.5% Used</span>
+            </div>
+            <div class="storage-progress">
+              <div class="storage-segment" id="segSave" style="width: 25%; background: var(--cyan);" title="Save Game Data"></div>
+              <div class="storage-segment" id="segSettings" style="width: 10%; background: var(--emerald);" title="Settings"></div>
+              <div class="storage-segment" id="segCustom" style="width: 15%; background: var(--amber);" title="Custom Games"></div>
+              <div class="storage-segment" id="segSnapshots" style="width: 30%; background: var(--purple);" title="Snapshots"></div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:11px; color:var(--text-muted);">
+              <span><span style="color:var(--cyan);">■</span> ข้อมูลเซฟเกม (<span id="sizeSave">0 KB</span>)</span>
+              <span><span style="color:var(--emerald);">■</span> การตั้งค่า (<span id="sizeSettings">0 KB</span>)</span>
+              <span><span style="color:var(--amber);">■</span> คลังเกม Custom (<span id="sizeCustom">0 KB</span>)</span>
+              <span><span style="color:var(--purple);">■</span> สล็อต Snapshot (<span id="sizeSnapshots">0 KB</span>)</span>
+            </div>
+          </div>
+
+          <!-- Quick Actions Hub -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="font-family:var(--font-display); font-size:14px; font-weight:700; color:#fff; margin-bottom: 8px;">
+                ⚡ เครื่องมือและคำสั่งบริหารด่วนของผู้ดูแล (Admin Quick Actions)
+              </div>
+              <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+                คำสั่งการจัดการระบบระดับส่วนกลาง จัดการไฟล์สำรอง ตรวจสอบสภาพแวดล้อม และลงทะเบียนเกมใหม่
+              </p>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:14px;">
+              <button class="btn btn-outline btn-sm" onclick="exportSaveFile()">
+                📦 สำรองข้อมูลเซฟ (Export)
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="openAddGameDialog()">
+                ➕ ลงทะเบียนเกมใหม่
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="switchTab('settings')">
+                ⚙️ ตั้งค่าความปลอดภัย
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="switchTab('backups')">
+                📑 จัดการสล็อตเซฟ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Log Console -->
+        <div style="margin-top: 10px;">
+          <div class="section-title" style="font-size: 16px; margin-bottom: 10px;">
+            บันทึกการทำงานและตรวจสอบของระบบ (Admin Operations & Audit Log)
+          </div>
+          <div class="log-console" id="logConsole">
+            <div class="log-line">
+              <span class="log-time">[00:00:00]</span>
+              <span class="log-tag">[SYSTEM]</span>
+              <span class="log-msg">NEXUS Game Management Dashboard ทำงานพร้อมใช้งาน</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB: LIVE TACTICAL MAP ==================== -->
+      <section class="tab-pane" id="tab-map">
+        <div class="section-header">
+          <div class="section-title">
+            แผนที่ยุทธการสด (Live Tactical Map)
+            <span class="desc">แผนที่โลกทั้งใบของ OPERATION: BIOHAZARD พร้อมตำแหน่งผู้เล่น ยานพาหนะ ซอมบี้ และสิ่งปลูกสร้าง แบบเรียลไทม์ (เปิดเกมไว้เพื่อดูสถานะสด)</span>
+          </div>
+        </div>
+        <!-- zombie invasion control (CMD_TRIGGER_INVASION / CMD_STOP_INVASION, status from telemetry.raid) -->
+        <div class="inv-ctl">
+          <div class="inv-ctl-info">
+            <div class="inv-ctl-title">🧟 ซอมบี้บุกฐาน (Zombie Invasion)</div>
+            <div class="inv-ctl-status" data-inv-status>เปิดเกม OPERATION: BIOHAZARD เพื่อสั่งการ</div>
+          </div>
+          <div class="inv-ctl-btns">
+            <button class="btn btn-danger btn-sm" data-inv-start onclick="sendGameCmd('CMD_TRIGGER_INVASION')">🚨 สั่งซอมบี้บุก (เปิดไซเรน)</button>
+            <button class="btn btn-danger btn-sm" data-inv-start onclick="sendGameCmd('CMD_TRIGGER_INVASION', { now: true })">⚡ บุกทันที</button>
+            <button class="btn btn-outline btn-sm" data-inv-stop onclick="sendGameCmd('CMD_STOP_INVASION')">🛑 ยุติการบุก</button>
+          </div>
+        </div>
+        <!-- whole overworld + live markers from the game (nexus-bridge.js) -->
+        <div class="tac-map" id="tacMap">
+          <div class="base-ops-head" style="justify-content:space-between;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_SPECTATE', {})">👁 เปิด/ปิด โหมดแอดมินผู้สังเกตการณ์ในเกม</button>
+              <span id="specState" style="font-size:11px; color:var(--text-dim);"></span>
+            </div>
+            <div class="tac-toggles">
+              <label><input type="checkbox" id="tacShowZombies" checked onchange="drawTacMap()"> ซอมบี้</label>
+              <label><input type="checkbox" id="tacShowLabels" checked onchange="drawTacMap()"> ชื่อโซน</label>
+              <label><input type="checkbox" id="tacShowBuilds" checked onchange="drawTacMap()"> สิ่งปลูกสร้าง</label>
+            </div>
+          </div>
+          <div class="tac-map-wrap">
+            <canvas id="tacCanvas" width="1280" height="720"></canvas>
+            <div class="tac-tip" id="tacTip"></div>
+            <div class="tac-map-empty" id="tacEmpty">เปิดเกม OPERATION: BIOHAZARD เพื่อโหลดแผนที่ยุทธการ</div>
+          </div>
+          <div class="tac-legend">
+            <span><i style="background:#ffffff"></i>ผู้เล่น</span>
+            <span><i style="background:#ff4040"></i>ซอมบี้</span>
+            <span><i style="background:#ff9a2a"></i>ฝูงซอมบี้บุก</span>
+            <span><i style="background:#ff40ff"></i>บอส</span>
+            <span><i style="background:#e8d48a"></i>รถถัง M1A1</span>
+            <span><i style="background:#9ad868"></i>BTR-80 ลาดตระเวน</span>
+            <span><i style="background:#60e0ff"></i>QRF</span>
+            <span><i style="background:#ffb020"></i>รถลาก</span>
+            <span><i style="background:#58a8ff"></i>ทหาร / บอท</span>
+            <span><i style="background:#c0c8d8"></i>สิ่งปลูกสร้าง</span>
+            <span><i style="background:#ffb040"></i>✈ การโจมตีทางอากาศ</span>
+            <span id="tacNightNote"></span>
+          </div>
+        </div>
+
+        <!-- Situation picture: who is doing what, right now -->
+        <div class="sit-grid">
+          <div class="sit-card">
+            <h3>
+              <span>🎖️ หน่วยในสนามรบ (Unit Roster) <span id="sitUnitCount" style="color:var(--text-dim); font-weight:400;"></span></span>
+              <span class="sit-chips" id="sitUnitFilter">
+                <button class="sit-chip on" data-f="all">ทั้งหมด</button>
+                <button class="sit-chip" data-f="people">กำลังพล</button>
+                <button class="sit-chip" data-f="vehicles">ยานพาหนะ</button>
+                <button class="sit-chip" data-f="boss">บอส</button>
+              </span>
+            </h3>
+            <div id="sitSelected"></div>
+            <div class="sit-list" id="sitUnits"><div class="unit-act">เปิดเกมเพื่อดูหน่วยในสนาม</div></div>
+          </div>
+          <div class="sit-card">
+            <h3>
+              <span>📡 บันทึกสถานการณ์ (Situation Log)</span>
+              <span class="sit-chips" id="sitEventFilter">
+                <button class="sit-chip on" data-f="all">ทั้งหมด</button>
+                <button class="sit-chip" data-f="alert">เตือนภัย</button>
+                <button class="sit-chip" data-f="unit">หน่วย</button>
+                <button class="sit-chip" data-f="radio">วิทยุ</button>
+              </span>
+            </h3>
+            <div class="sit-list" id="sitEvents"><div class="unit-act">ยังไม่มีเหตุการณ์</div></div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==================== TAB 2: GAMES LIBRARY ==================== -->
+      <section class="tab-pane" id="tab-games">
+        <div class="section-header">
+          <div class="section-title">
+            คลังเกมและศูนย์เปิดเล่น (Games Library)
+            <span class="desc">เปิดเล่น บริหารจัดการ และเพิ่มเกมใหม่เข้าสู่ระบบ</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddGameDialog()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            + เพิ่มเกมใหม่
+          </button>
+        </div>
+
+        <div class="games-grid" id="gamesGrid">
+          <!-- Game 1: BIOHAZARD -->
+          <div class="game-card">
+            <div class="game-cover" style="background: radial-gradient(circle, #2d1822 0%, #0d0f18 100%);">
+              <div style="font-size: 48px;">☣️</div>
+              <span class="game-cover-badge">RPG / Shooter</span>
+            </div>
+            <div class="game-body">
+              <h3>OPERATION: BIOHAZARD</h3>
+              <div class="game-meta">
+                <span class="game-tag">Tactical</span>
+                <span class="game-tag">Zombies</span>
+                <span class="game-tag">22 Guns</span>
+                <span class="game-tag">M1A1 Tank</span>
+              </div>
+              <p class="game-desc">
+                ต่อสู้กับฝูงซอมบี้กลายพันธุ์และบอสชีวภาพ ตีบวกปืน ฝึกสกิล และร่วมมือกับรถถัง M1A1 เพื่อปกป้อง Outpost Alpha
+              </p>
+              <div class="game-footer">
+                <button class="btn btn-primary btn-sm" onclick="openGameModal('rpg.html', 'OPERATION: BIOHAZARD')">
+                  เล่นในนี้
+                </button>
+                <a href="rpg.html" target="_blank" class="btn btn-outline btn-sm">แท็บใหม่</a>
+                <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="switchTab('save-editor')">จัดการเซฟ</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Game 2: Moonlit Run -->
+          <div class="game-card">
+            <div class="game-cover" style="background: radial-gradient(circle, #192348 0%, #0c0e18 100%);">
+              <div style="font-size: 48px;">🏃‍♂️</div>
+              <span class="game-cover-badge">Platformer</span>
+            </div>
+            <div class="game-body">
+              <h3>Moonlit Run</h3>
+              <div class="game-meta">
+                <span class="game-tag">Arcade</span>
+                <span class="game-tag">8-Bit</span>
+                <span class="game-tag">Runner</span>
+              </div>
+              <p class="game-desc">
+                วิ่ง กระโดด หลบสไลม์และค้างคาว เก็บเหรียญทอง และพุ่งชนกล่องปริศนาเพื่อเข้าถึงธงชัยชนะก่อนเวลาหมด
+              </p>
+              <div class="game-footer">
+                <button class="btn btn-accent btn-sm" onclick="openGameModal('moonlit_run.html', 'Moonlit Run')">
+                  เล่นในนี้
+                </button>
+                <a href="moonlit_run.html" target="_blank" class="btn btn-outline btn-sm">แท็บใหม่</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tool: Model Gallery -->
+          <div class="game-card">
+            <div class="game-cover" style="background: radial-gradient(circle, #25283d 0%, #0c0e18 100%);">
+              <div style="font-size: 48px;">🎨</div>
+              <span class="game-cover-badge">3D & Pixel</span>
+            </div>
+            <div class="game-body">
+              <h3>Model & Asset Gallery</h3>
+              <div class="game-meta">
+                <span class="game-tag">54 Models</span>
+                <span class="game-tag">Sprites</span>
+                <span class="game-tag">Inspect</span>
+              </div>
+              <p class="game-desc">
+                ศูนย์จัดแสดงโมเดลตัวละคร Operatives, คลังปืนพิกเซล 22 แบบ, NPC, มอนสเตอร์ และบอสยักษ์
+              </p>
+              <div class="game-footer">
+                <button class="btn btn-outline btn-sm" style="width: 100%;" onclick="openGameModal('models/index.html', '3D / Pixel Model Gallery')">
+                  เปิดแกลเลอรีโมเดล
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 3: SAVE EDITOR ==================== -->
+      <section class="tab-pane" id="tab-save-editor">
+        <div class="section-header">
+          <div class="section-title">
+            ศูนย์จัดการข้อมูลเซฟและตัวละคร (Save Game & Operative Manager)
+            <span class="desc">แก้ไข ปรับแต่ง เลเวล เงิน และสรรพาวุธของตัวละคร</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="createFreshSave()">
+              สร้างเซฟเริ่มต้นใหม่
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="saveSaveData()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+              บันทึกการแก้ไขลงเกม
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Connected Telemetry & Remote Ops Panel -->
+        <div class="live-bridge-panel" id="liveBridgePanel">
+          <div class="live-header">
+            <div class="live-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              <span>ศูนย์เชื่อมต่อและสั่งการเกมสด (Live Game Remote Link)</span>
+            </div>
+            <div class="live-badge offline" id="liveBadgeStatus">
+              <span class="status-dot" id="liveBadgeDot" style="background:#5c6280; box-shadow:none;"></span>
+              <span id="liveBadgeLabel">รอเปิดเกม (STANDBY)</span>
+            </div>
+          </div>
+
+          <!-- Real-time Telemetry Stats -->
+          <div class="telemetry-grid">
+            <div class="telemetry-card">
+              <div class="t-label">
+                <span>เกราะพลังชีวิต (HP)</span>
+                <span id="teleHpText">0 / 0</span>
+              </div>
+              <div class="t-val" id="teleHpVal" style="color:var(--emerald);">--</div>
+              <div class="t-bar-wrap">
+                <div class="t-bar-fill" id="teleHpBar" style="width: 0%; background: var(--emerald);"></div>
+              </div>
+            </div>
+
+            <div class="telemetry-card">
+              <div class="t-label">
+                <span>พลังงานสำรอง (MP)</span>
+                <span id="teleMpText">0 / 0</span>
+              </div>
+              <div class="t-val" id="teleMpVal" style="color:var(--cyan);">--</div>
+              <div class="t-bar-wrap">
+                <div class="t-bar-fill" id="teleMpBar" style="width: 0%; background: var(--cyan);"></div>
+              </div>
+            </div>
+
+            <div class="telemetry-card">
+              <div class="t-label">
+                <span>กระสุนในแม็กกาซีน</span>
+                <span id="teleAmmoType">AMMO</span>
+              </div>
+              <div class="t-val" id="teleAmmoVal" style="color:var(--amber);">-- / --</div>
+              <div class="t-bar-wrap">
+                <div class="t-bar-fill" id="teleAmmoBar" style="width: 0%; background: var(--amber);"></div>
+              </div>
+            </div>
+
+            <div class="telemetry-card">
+              <div class="t-label">
+                <span>พิกัดสนามรบ & โซน</span>
+                <span id="teleCoords">X: - , Y: -</span>
+              </div>
+              <div class="t-val" id="teleZone" style="font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                รอการเชื่อมต่อ
+              </div>
+              <div style="font-size:10px; color:var(--text-dim); margin-top:4px;" id="teleInvasionMsg">
+                สถานะฐาน: ปกติ
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-time Remote Action Bar -->
+          <div class="live-actions-bar">
+            <span style="font-size:12px; font-family:var(--font-display); color:var(--text-muted); font-weight:700;">
+              คำสั่งส่งเข้าเกมทันที (Real-Time Cmd):
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_HEAL')">
+              💚 ฟื้นฟูเลือดเต็มทันที
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_ADD_GOLD', { amount: 10000 })">
+              💰 +10,000G
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_ADD_GOLD', { amount: 50000 })">
+              💰 +50,000G
+            </button>
+            <button class="btn btn-outline btn-sm" id="btnLiveGodMode" onclick="sendGameCmd('CMD_TOGGLE_GODMODE')">
+              🛡️ สลับโหมดอมตะ (God Mode)
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="sendGameCmd('CMD_TELEPORT_BASE')">
+              🚁 วาร์ปกลับ Outpost Alpha
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="sendGameCmd('CMD_TRIGGER_INVASION')">
+              🚨 สั่งซอมบี้บุกฐานเดี๋ยวนี้
+            </button>
+          </div>
+        </div>
+
+        <div class="editor-layout">
+          <!-- Operative Card Sidebar -->
+          <div class="editor-sidebar">
+            <div class="op-avatar-box">
+              <div class="op-avatar-icon" id="editorAvatarIcon">🎖️</div>
+              <div class="op-avatar-class" id="editorAvatarClass">Assault Specialist</div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div class="form-group">
+                <label>เปลี่ยนสายอาชีพ (Class)</label>
+                <select class="form-control" id="editClass" onchange="onClassChange()">
+                  <option value="assault">Assault Specialist (ไรเฟิล / เกราะหนา)</option>
+                  <option value="sniper">Recon Sniper (สไนเปอร์ / เจาะเกราะ)</option>
+                  <option value="heavy">Heavy Gunner (ปืนกลหนัก / ลูกซอง)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>ชื่อฉายาเกียรติยศ (Title)</label>
+                <input type="text" class="form-control" id="editTitle" placeholder="เช่น Commander, Vanguard">
+              </div>
+
+              <div class="form-group">
+                <label>สัตว์เลี้ยง / โดรนคู่หู (Companion)</label>
+                <select class="form-control" id="editPet">
+                  <option value="none">ไม่มี (None)</option>
+                  <option value="dog">สุนัขสงคราม K-9 Combat Dog</option>
+                  <option value="drone">โดรนจู่โจม Tactical Drone</option>
+                  <option value="turret">ป้อมปืนกล Sentry Turret</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-input); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); font-size: 12px;">
+              <div style="color: var(--text-dim); margin-bottom: 4px;">ข้อมูลทางเทคนิค:</div>
+              <div>Key: <code style="color: var(--cyan);">ironvale-save-v1</code></div>
+              <div id="saveSizeInfo">ขนาดข้อมูล: ~1.2 KB</div>
+              <div id="saveLastModified">สถานะ: โหลดแล้ว</div>
+            </div>
+          </div>
+
+          <!-- Main Edit Form -->
+          <div class="editor-main">
+            <!-- Cheats Bar -->
+            <div class="cheat-box">
+              <div class="cheat-box-title">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                คำสั่งด่วน / โกงสเตตัส (Quick Actions)
+              </div>
+              <div class="cheat-buttons">
+                <button class="btn btn-outline btn-sm" onclick="cheatAddGold(10000)">+10,000 Gold</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatAddGold(100000)">+100,000 Gold</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatAddSP(10)">+10 แต้มสกิล (SP)</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatAddScrap(500)">+500 เศษเหล็ก (Scrap)</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatMaxStats()">⚡ Max Stats (Lv.50 + เทพ)</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatFullHeal()">💖 เติมเลือด & ยาเต็ม 99</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatGoldenAK()">🔫 เสก AK-47 Golden (+9)</button>
+                <button class="btn btn-outline btn-sm" onclick="cheatUnlockAllAchievements()">🏅 ปลดล็อกเหรียญตราทั้งหมด</button>
+              </div>
+            </div>
+
+            <!-- Parameters Grid -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label>
+                  <span>ระดับเลเวล (Level)</span>
+                  <span id="levelDisplay" style="color:var(--cyan); font-weight:bold;">1</span>
+                </label>
+                <input type="range" min="1" max="50" value="1" id="editLvl" oninput="document.getElementById('levelDisplay').textContent = this.value">
+              </div>
+
+              <div class="form-group">
+                <label>ค่าประสบการณ์ (Current XP)</label>
+                <input type="number" class="form-control" id="editXP" min="0" value="0">
+              </div>
+
+              <div class="form-group">
+                <label>เงินทุน (Gold)</label>
+                <input type="number" class="form-control" id="editGold" min="0" value="0">
+              </div>
+
+              <div class="form-group">
+                <label>เศษเหล็กสร้างฐาน (Scrap)</label>
+                <input type="number" class="form-control" id="editScrap" min="0" value="0">
+              </div>
+
+              <div class="form-group">
+                <label>สิ่งปลูกสร้างในเซฟ (Base Structures)</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <span id="editBuildsInfo" style="font-size:12px; color:var(--text-muted); flex:1;">0 ชิ้น</span>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="clearAllStructures()">รื้อทั้งหมด</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>แต้มอัปสกิล (Skill Points - SP)</label>
+                <input type="number" class="form-control" id="editSP" min="0" value="0">
+              </div>
+
+              <div class="form-group">
+                <label>พลังชีวิตปัจจุบัน (HP)</label>
+                <input type="number" class="form-control" id="editHP" min="1" value="100">
+              </div>
+
+              <div class="form-group">
+                <label>พลังงาน / เกราะ (MP / Energy)</label>
+                <input type="number" class="form-control" id="editMP" min="0" value="50">
+              </div>
+
+              <div class="form-group">
+                <label>จำนวนชุดปฐมพยาบาล (Medkits / Potions)</label>
+                <input type="number" class="form-control" id="editPotions" min="0" max="99" value="3">
+              </div>
+
+              <div class="form-group">
+                <label>ยอดซอมบี้ที่กวาดล้าง (Kills)</label>
+                <input type="number" class="form-control" id="editKills" min="0" value="0">
+              </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 6px 0;">
+
+            <!-- Equipment Selection -->
+            <div class="section-title" style="font-size: 16px;">
+              สรรพาวุธและยุทโธปกรณ์ที่สวมใส่ (Equipped Gear)
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group" style="grid-column: span 2;">
+                <label>อาวุธปืนหลัก (Primary Firearm)</label>
+                <select class="form-control" id="editWeaponSelect"></select>
+              </div>
+
+              <div class="form-group">
+                <label>ระดับตีบวกอาวุธ (Upgrade +)</label>
+                <select class="form-control" id="editWeaponPlus">
+                  <option value="0">+0 (มาตรฐาน)</option>
+                  <option value="1">+1</option>
+                  <option value="2">+2</option>
+                  <option value="3">+3</option>
+                  <option value="4">+4</option>
+                  <option value="5">+5 (เริ่มมีออร่าแสง)</option>
+                  <option value="6">+6</option>
+                  <option value="7">+7</option>
+                  <option value="8">+8</option>
+                  <option value="9">+9 (ออร่าสีม่วง สูงสุด!)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>ชุดเกราะลำตัว (Body Armor)</label>
+                <select class="form-control" id="editArmorSelect">
+                  <option value="0">Fatigue Webbing (ชุดฝึก)</option>
+                  <option value="1">Tactical Kevlar Vest (เกราะเคฟล่า)</option>
+                  <option value="2">Ballistic Flak Vest (เกราะกันสะเก็ด)</option>
+                  <option value="3">Exosuit Body Armor (โครงเสริมกำลังเอกโซ)</option>
+                  <option value="4">Titanium Dreadnought Frame (เกราะไททาเนียม)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>หมวกเกราะ (Tactical Helmet)</label>
+                <select class="form-control" id="editHelmSelect">
+                  <option value="0">Field Beret (หมวกเบเร่ต์)</option>
+                  <option value="1">Kevlar Helmet (หมวกเคฟล่า)</option>
+                  <option value="2">PASGT Ballistic Helmet (หมวกเหล็กยุทธวิธี)</option>
+                  <option value="3">Night Vision Visor (กล้องมองกลางคืน NVG)</option>
+                  <option value="4">Tactical HUD Targeting Visor (หน้ากากเล็ง HUD)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>รองเท้าสนาม (Combat Boots)</label>
+                <select class="form-control" id="editBootsSelect">
+                  <option value="0">Combat Boots (รองเท้าคอมแบต)</option>
+                  <option value="1">Reinforced Stride Boots (รองเท้าเสริมเกราะ)</option>
+                  <option value="2">Sprinter Nanoweave Boots (รองเท้าวิ่งความเร็วสูง)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+              <button class="btn btn-outline" onclick="loadSaveData()">ยกเลิกการเปลี่ยนแปลง</button>
+              <button class="btn btn-primary" onclick="saveSaveData()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                บันทึกการแก้ไขลงเกม
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 4: SETTINGS & TUNING ==================== -->
+      <section class="tab-pane" id="tab-settings">
+        <div class="section-header">
+          <div class="section-title">
+            ตั้งค่าระบบและปรับแต่งสมดุลเกม (Settings & Tactical Tuning)
+            <span class="desc">ปรับระดับเสียง การแสดงผล ความยาก และสมดุลของรถถัง/ซอมบี้</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSettingsData()">
+            บันทึกการตั้งค่า
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
+          <!-- Card: Sound & Display -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 22px;">
+            <div class="section-title" style="font-size: 16px; margin-bottom: 16px;">
+              🎵 เสียงและการแสดงผล (Audio & Visuals)
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label>
+                  <span>ระดับเสียงเพลง (BGM Volume)</span>
+                  <span id="bgmDisplay">50%</span>
+                </label>
+                <input type="range" min="0" max="100" value="50" id="setBGM" oninput="document.getElementById('bgmDisplay').textContent = this.value + '%'">
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <span>ระดับเสียงเอฟเฟกต์ (SFX Volume)</span>
+                  <span id="sfxDisplay">70%</span>
+                </label>
+                <input type="range" min="0" max="100" value="70" id="setSFX" oninput="document.getElementById('sfxDisplay').textContent = this.value + '%'">
+              </div>
+
+              <div class="form-group">
+                <label>ภาษาในเกม (Language)</label>
+                <select class="form-control" id="setLang">
+                  <option value="th">ภาษาไทย (Thai)</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 8px;">
+                <label style="display:flex; align-items:center; gap: 10px; font-size: 13px; cursor: pointer;">
+                  <input type="checkbox" id="setShake" checked style="accent-color: var(--cyan); width: 16px; height: 16px;">
+                  <span>เอฟเฟกต์หน้าจอสั่นเมื่อยิง/ระเบิด (Screen Shake)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap: 10px; font-size: 13px; cursor: pointer;">
+                  <input type="checkbox" id="setDmgNumbers" checked style="accent-color: var(--cyan); width: 16px; height: 16px;">
+                  <span>แสดงตัวเลขความเสียหายลอย (Floating Damage Numbers)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Difficulty & Tactical Balance -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 22px;">
+            <div class="section-title" style="font-size: 16px; margin-bottom: 16px;">
+              🛡️ ระดับความยากและสมดุลยุทธวิธี (Difficulty & Mods)
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group">
+                <label>ระดับความยากของเกม (Difficulty Level)</label>
+                <select class="form-control" id="setDifficulty">
+                  <option value="casual">Casual (เล่นสบาย ซอมบี้ดาเมจเบา)</option>
+                  <option value="normal" selected>Tactical Normal (มาตรฐานสนามรบ)</option>
+                  <option value="hardcore">Hardcore (ซอมบี้วิ่งไว ดาเมจแรง)</option>
+                  <option value="nightmare">Nightmare Apocalypse (นรกชีวภาพ)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>ความถี่ซอมบี้บุกฐาน (Invasion Waves Interval)</label>
+                <select class="form-control" id="setInvasionInterval">
+                  <option value="120">ระลอกด่วนพิเศษ: ทุก 2 นาที (Extreme Defense)</option>
+                  <option value="420" selected>ปกติ: ทุก 7 นาที (Standard)</option>
+                  <option value="900">ผ่อนคลาย: ทุก 15 นาที (Relaxed)</option>
+                  <option value="0">ปิดการบุกฐานชั่วคราว (Disabled)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>อำนาจการยิงรถถัง M1A1 Abrams (Tank Firepower)</label>
+                <select class="form-control" id="setTankPower">
+                  <option value="1.0" selected>มาตรฐาน: 120mm ปืนใหญ่ปกติ</option>
+                  <option value="2.0">บูสต์ 200%: ระเบิดแรงสองเท่า</option>
+                  <option value="5.0">Nuclear Artillery: นัดเดียวบอสสลาย (Cheat)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: Admin Security & Password Management -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 22px; grid-column: 1 / -1;">
+            <div class="section-title" style="font-size: 16px; margin-bottom: 16px;">
+              🔑 ความปลอดภัยและรหัสผ่านผู้ดูแลระบบ (Admin Access Security)
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px;">
+              <div class="form-group">
+                <label>ชื่อผู้ดูแลระบบ (Admin Username)</label>
+                <input type="text" class="form-control" id="changeAdminUser" value="admin">
+              </div>
+
+              <div class="form-group">
+                <label>รหัสผ่านปัจจุบัน (Current Password)</label>
+                <input type="password" class="form-control" id="currentAdminPass" placeholder="รหัสผ่านปัจจุบัน">
+              </div>
+
+              <div class="form-group">
+                <label>รหัสผ่านใหม่ (New Password)</label>
+                <input type="password" class="form-control" id="newAdminPass" placeholder="รหัสผ่านใหม่">
+              </div>
+
+              <div class="form-group">
+                <label>ยืนยันรหัสผ่านใหม่ (Confirm Password)</label>
+                <input type="password" class="form-control" id="confirmAdminPass" placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง">
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 16px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:12px; color:var(--text-dim); margin-right:auto;">
+                * บันทึกรหัสผ่านใหม่ลงเครื่องอย่างปลอดภัย สามารถรีเซ็ตได้ตลอดเวลา
+              </span>
+              <button class="btn btn-outline btn-sm" onclick="resetAdminCredentials()">
+                รีเซ็ตเป็นค่าเริ่มต้น (admin / admin123)
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="updateAdminCredentials()">
+                บันทึกรหัสผ่านใหม่
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: ARMORY & BESTIARY ==================== -->
+      <section class="tab-pane" id="tab-armory">
+        <div class="section-header">
+          <div class="section-title">
+            คลังสรรพาวุธและสารานุกรมมอนสเตอร์ (Armory & Bestiary)
+            <span class="desc">ข้อมูลโมเดลปืน 22 รุ่น และสายพันธุ์ซอมบี้ชีวภาพ</span>
+          </div>
+          <div style="display:flex; gap: 8px;">
+            <button class="btn btn-outline btn-sm active" id="filterGunsAll" onclick="filterWeapons('all')">ปืนทั้งหมด</button>
+            <button class="btn btn-outline btn-sm" onclick="filterWeapons('rifle')">Rifles</button>
+            <button class="btn btn-outline btn-sm" onclick="filterWeapons('sniper')">Snipers</button>
+            <button class="btn btn-outline btn-sm" onclick="filterWeapons('heavy')">Heavy</button>
+            <button class="btn btn-outline btn-sm" onclick="filterWeapons('secret')">Boss / Secret</button>
+          </div>
+        </div>
+
+        <!-- Armory Weapon Cards Grid -->
+        <div class="armory-grid" id="armoryGrid">
+          <!-- Dynamically populated by JS from GUN_DATA -->
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-subtle); margin: 32px 0;">
+
+        <!-- Bestiary Section -->
+        <div class="section-title" style="margin-bottom: 20px;">
+          🧟 สารานุกรมซอมบี้กลายพันธุ์ & บอสชีวภาพ (Zombie Bestiary)
+        </div>
+
+        <div class="bestiary-grid">
+          <div class="monster-card">
+            <div class="monster-title">
+              <span>Zombie Walker (ผู้ติดเชื้อเดินช้า)</span>
+              <span class="threat-tag">THREAT: LOW</span>
+            </div>
+            <div class="monster-desc">
+              ผู้ติดเชื้อระยะแรก เดินโซเซเข้าหาผู้เล่น มักพบเป็นกลุ่มตามชานเมือง Sector 1 ดรอปเนื้อติดเชื้อ (Infected Flesh)
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim);">
+              HP: 35 | SPD: ช้า | DMG: 12 | จุดอ่อน: ลูกซอง & ไรเฟิลระยะประชิด
+            </div>
+          </div>
+
+          <div class="monster-card">
+            <div class="monster-title">
+              <span>Acid Spitter (ซอมบี้พ่นกรดพิษ)</span>
+              <span class="threat-tag" style="color: var(--amber); background: rgba(255,184,0,0.15);">THREAT: MED</span>
+            </div>
+            <div class="monster-desc">
+              กลายพันธุ์ส่วนคอและกระเพาะ สามารถพ่นก้อนสารพิษกรดระยะไกล ละลายเกราะผู้เล่นได้อย่างรวดเร็ว
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim);">
+              HP: 60 | SPD: ปานกลาง | DMG: 25 พิษ | ดรอป: Corrosive Acid Gland
+            </div>
+          </div>
+
+          <div class="monster-card">
+            <div class="monster-title">
+              <span>Armored Brute (ซอมบี้ยักษ์เกราะกระดูก)</span>
+              <span class="threat-tag" style="color: var(--crimson); background: rgba(255,42,95,0.15);">THREAT: HIGH</span>
+            </div>
+            <div class="monster-desc">
+              ซอมบี้ร่างยักษ์ที่มีโครงกระดูกหนาห่อหุ้ม วิ่งพุ่งชนแนวป้องกันและทหารรักษาการ
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim);">
+              HP: 240 | SPD: ไวตอนพุ่ง | DMG: 45 | จุดอ่อน: กระสุนเจาะเกราะ Sniper
+            </div>
+          </div>
+
+          <div class="monster-card" style="border-left-color: var(--purple);">
+            <div class="monster-title">
+              <span>The Goliath Tank (บอสระลอกบุก)</span>
+              <span class="threat-tag" style="color: var(--purple); background: rgba(179,136,255,0.15);">BOSS</span>
+            </div>
+            <div class="monster-desc">
+              บอสชีวภาพยักษ์ที่มาพร้อมการบุกฐานระลอกสุดท้าย ทนทานกระสุนปืนเล็ก แต่เป็นเป้าหมายโปรดของปืนใหญ่รถถัง M1A1!
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim);">
+              HP: 1,500+ | SPD: ปานกลาง | ดรอป: Goliath Tank Core & พิมพ์เขียวปืนบอส
+            </div>
+          </div>
+
+          <div class="monster-card" style="border-left-color: var(--purple);">
+            <div class="monster-title">
+              <span>Nemesis Tyrant (บอสห้องทดลอง B3)</span>
+              <span class="threat-tag" style="color: var(--purple); background: rgba(179,136,255,0.15);">WORLD BOSS</span>
+            </div>
+            <div class="monster-desc">
+              ยอดอาวุธชีวภาพที่หลุดจากการกักกันในห้องแล็บใต้ดิน Bunker B3 มีการโจมตีรอบทิศและพุ่งสังหาร
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim);">
+              HP: 3,000+ | SPD: เร็ว | ดรอป: Alpha Tyrant Organ & หีบสมบัติโบราณ
+            </div>
+          </div>
+
+          <div class="monster-card" style="border-left-color: var(--cyan);">
+            <div class="monster-title">
+              <span>Abyssal Omega (บอสใหญ่รอยแยกมิติ)</span>
+              <span class="threat-tag" style="color: var(--cyan); background: rgba(0,240,255,0.15);">ELITE APEX</span>
+            </div>
+            <div class="monster-desc">
+              ราชันย์แห่งรอยแยกมิติสีดำ ลอยตัวปล่อยคลื่นพลังงานและเสกสมุนซอมบี้กลายพันธุ์
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim);">
+              HP: 5,000+ | พลังงานพลาสม่า | ดรอป: Dark Bio-Mutagen สำหรับคราฟต์ปืน Omega
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 6: BACKUP & RESTORE ==================== -->
+      <section class="tab-pane" id="tab-backups">
+        <div class="section-header">
+          <div class="section-title">
+            ศูนย์สำรองข้อมูลและกู้คืนเซฟ (Save Backup & Restore Center)
+            <span class="desc">จัดเก็บสล็อต สำรองข้อมูลลงเครื่อง หรือกู้คืนเซฟเดิม</span>
+          </div>
+        </div>
+
+        <!-- Snapshots Slots -->
+        <div class="slots-grid">
+          <div class="slot-card" id="slotCard1">
+            <div class="slot-header">
+              <span>SLOT 1: สำรองด่วน</span>
+              <span id="slot1Status">ว่าง</span>
+            </div>
+            <div class="slot-body" id="slot1Body">ไม่มีข้อมูลที่บันทึกไว้</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline btn-sm" style="flex:1;" onclick="saveToSlot(1)">บันทึกลง Slot 1</button>
+              <button class="btn btn-primary btn-sm" id="btnLoadSlot1" style="flex:1;" disabled onclick="loadFromSlot(1)">โหลด Slot 1</button>
+            </div>
+          </div>
+
+          <div class="slot-card" id="slotCard2">
+            <div class="slot-header">
+              <span>SLOT 2: สำรองด่วน</span>
+              <span id="slot2Status">ว่าง</span>
+            </div>
+            <div class="slot-body" id="slot2Body">ไม่มีข้อมูลที่บันทึกไว้</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline btn-sm" style="flex:1;" onclick="saveToSlot(2)">บันทึกลง Slot 2</button>
+              <button class="btn btn-primary btn-sm" id="btnLoadSlot2" style="flex:1;" disabled onclick="loadFromSlot(2)">โหลด Slot 2</button>
+            </div>
+          </div>
+
+          <div class="slot-card" id="slotCard3">
+            <div class="slot-header">
+              <span>SLOT 3: สำรองด่วน</span>
+              <span id="slot3Status">ว่าง</span>
+            </div>
+            <div class="slot-body" id="slot3Body">ไม่มีข้อมูลที่บันทึกไว้</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-outline btn-sm" style="flex:1;" onclick="saveToSlot(3)">บันทึกลง Slot 3</button>
+              <button class="btn btn-primary btn-sm" id="btnLoadSlot3" style="flex:1;" disabled onclick="loadFromSlot(3)">โหลด Slot 3</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Import / Export Section -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+          <!-- Export -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px;">
+            <div class="section-title" style="font-size: 16px; margin-bottom: 12px;">
+              📥 ส่งออกไฟล์เซฟ (Export to JSON)
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+              ดาวน์โหลดข้อมูลตัวละคร ไอเทม และความคืบหน้าทั้งหมดเก็บไว้เป็นไฟล์ <code>.json</code> เพื่อความปลอดภัย
+            </p>
+            <button class="btn btn-primary" onclick="exportSaveFile()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              ดาวน์โหลดไฟล์ biohazard_save.json
+            </button>
+          </div>
+
+          <!-- Import -->
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px;">
+            <div class="section-title" style="font-size: 16px; margin-bottom: 12px;">
+              📤 นำเข้าไฟล์เซฟ (Import JSON)
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+              เลือกไฟล์ <code>.json</code> จากในเครื่องเพื่อนำเข้าและเขียนทับเซฟปัจจุบันทันที
+            </p>
+            <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleFileImport(event)">
+            <button class="btn btn-outline" onclick="document.getElementById('importFileInput').click()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              เลือกไฟล์ JSON จากคอมพิวเตอร์
+            </button>
+          </div>
+
+          <!-- Danger Zone -->
+          <div style="background: rgba(255, 42, 95, 0.05); border: 1px solid rgba(255, 42, 95, 0.25); border-radius: var(--radius-md); padding: 20px; grid-column: 1 / -1;">
+            <div class="section-title" style="font-size: 16px; color: var(--crimson); margin-bottom: 8px;">
+              ⚠️ เขตอันตราย (Danger Zone: Reset Data)
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+              หากข้อมูลเซฟเกิดความเสียหาย หรือต้องการเริ่มเกมใหม่ทั้งหมดตั้งแต่ต้น สามารถล้างข้อมูลเซฟได้ที่นี่
+            </p>
+            <button class="btn btn-danger btn-sm" onclick="confirmWipeSave()">
+              ล้างและรีเซ็ตข้อมูลเซฟทั้งหมด (Clear All Save Data)
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== MODAL: INTERACTIVE GAME PLAYER ==================== -->
+  <div id="gameModal">
+    <div class="modal-shell">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span id="modalGameTitle">Playing Game</span>
+        </div>
+        <div class="modal-controls">
+          <button class="btn btn-outline btn-sm" title="โหลดซ้ำ" onclick="reloadModalFrame()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="btn btn-outline btn-sm" title="เปิดในแท็บใหม่" onclick="popoutModalGame()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </button>
+          <button class="btn btn-outline btn-sm" title="เต็มจอ" onclick="toggleModalFullscreen()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+          <button class="btn btn-danger btn-sm" title="ปิดเกม" onclick="closeGameModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            ปิด
+          </button>
+        </div>
+      </div>
+      <div class="modal-frame-container">
+        <iframe id="modalGameFrame" class="modal-frame" src="about:blank"></iframe>
+      </div>
+      <div class="modal-footer">
+        <span id="modalControlsTip">💡 แนะนำ: กดปุ่มลูกศรหรือ WASD บังคับ, Space ยิง/กระโดด, Esc เพื่อตั้งค่า</span>
+        <span style="color: var(--cyan);">NEXUS Theater Mode · กด ESC นอกเกมเพื่อออก</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: ADD CUSTOM GAME ==================== -->
+  <div class="simple-dialog" id="addGameDialog">
+    <div class="dialog-card">
+      <div class="section-title" style="font-size: 18px;">
+        + เพิ่มเกมใหม่เข้าสู่ Dashboard
+      </div>
+      <div class="form-group">
+        <label>ชื่อเกม (Game Title)</label>
+        <input type="text" class="form-control" id="newGameTitle" placeholder="เช่น Cyber Siege, Pixel Racer">
+      </div>
+      <div class="form-group">
+        <label>ที่อยู่ไฟล์หรือ URL (File Path / Web URL)</label>
+        <input type="text" class="form-control" id="newGameURL" placeholder="เช่น my_game.html หรือ https://...">
+      </div>
+      <div class="form-group">
+        <label>หมวดหมู่ (Category)</label>
+        <select class="form-control" id="newGameCategory">
+          <option value="Action">Action / Shooter</option>
+          <option value="RPG">RPG / Adventure</option>
+          <option value="Arcade">Arcade / Retro</option>
+          <option value="Puzzle">Puzzle / Strategy</option>
+          <option value="Tool">Developer Tool</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ไอคอนหรือ Emoji (Icon)</label>
+        <input type="text" class="form-control" id="newGameIcon" value="🎮" placeholder="🎮, ⚔️, 🚗">
+      </div>
+      <div class="form-group">
+        <label>คำอธิบายสั้นๆ (Description)</label>
+        <input type="text" class="form-control" id="newGameDesc" placeholder="คำอธิบายวิธีการเล่นหรือจุดเด่น">
+      </div>
+      <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+        <button class="btn btn-outline btn-sm" onclick="closeAddGameDialog()">ยกเลิก</button>
+        <button class="btn btn-primary btn-sm" onclick="submitAddGame()">บันทึกเกม</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+
+  <!-- Application Script -->
+  <script>
+    // Constants
+    const SAVE_KEY = 'ironvale-save-v1';
+    const SETTINGS_KEY = 'ironvale-settings';
+    const CUSTOM_GAMES_KEY = 'nexus_custom_games_v1';
+    const SNAPSHOT_PREFIX = 'nexus_snapshot_slot_';
+    const ADMIN_CREDS_KEY = 'nexus_admin_creds_v1';
+    const ADMIN_SESSION_KEY = 'nexus_admin_session_v1';
+
+    // ==================== ADMIN AUTHENTICATION ENGINE ====================
+    function getAdminCredentials() {
+      try {
+        const raw = localStorage.getItem(ADMIN_CREDS_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return { username: 'admin', password: 'admin123' };
+    }
+
+    function checkAdminAuth() {
+      const token = sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY);
+      const gate = document.getElementById('adminLoginGate');
+      const userDisplay = document.getElementById('adminUserDisplay');
+      const creds = getAdminCredentials();
+
+      if (token && token.startsWith('AUTH_TOKEN_')) {
+        gate.classList.add('hidden');
+        if (userDisplay) userDisplay.textContent = creds.username;
+        const changeUserEl = document.getElementById('changeAdminUser');
+        if (changeUserEl) changeUserEl.value = creds.username;
+        return true;
+      } else {
+        gate.classList.remove('hidden');
+        return false;
+      }
+    }
+
+    function handleAdminLogin(event) {
+      if (event) event.preventDefault();
+      const uInput = document.getElementById('adminUsernameInput').value.trim();
+      const pInput = document.getElementById('adminPasswordInput').value;
+      const remember = document.getElementById('rememberAdmin').checked;
+      const errorBox = document.getElementById('loginErrorMsg');
+      const creds = getAdminCredentials();
+
+      if (uInput === creds.username && pInput === creds.password) {
+        errorBox.classList.remove('show');
+        const token = 'AUTH_TOKEN_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        if (remember) {
+          localStorage.setItem(ADMIN_SESSION_KEY, token);
+        } else {
+          sessionStorage.setItem(ADMIN_SESSION_KEY, token);
+        }
+
+        const gate = document.getElementById('adminLoginGate');
+        gate.classList.add('hidden');
+        document.getElementById('adminUserDisplay').textContent = creds.username;
+        document.getElementById('changeAdminUser').value = creds.username;
+        document.getElementById('adminPasswordInput').value = '';
+
+        showToast(`ยินดีต้อนรับผู้ดูแลระบบ: ${creds.username}!`, 'success');
+        logEvent('AUTH', `Admin เข้าสู่ระบบสำเร็จ (${creds.username})`);
+      } else {
+        errorBox.classList.add('show');
+        document.getElementById('loginErrorText').textContent = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+        logEvent('AUTH', `พยายามเข้าสู่ระบบไม่สำเร็จ (${uInput})`);
+      }
+    }
+
+    function adminLogout() {
+      if (confirm('คุณต้องการออกจากระบบผู้ดูแลระบบใช่หรือไม่?')) {
+        localStorage.removeItem(ADMIN_SESSION_KEY);
+        sessionStorage.removeItem(ADMIN_SESSION_KEY);
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('adminLoginGate').classList.remove('hidden');
+        showToast('ออกจากระบบผู้ดูแลระบบเรียบร้อยแล้ว', 'info');
+        logEvent('AUTH', 'ผู้ดูแลระบบออกจากระบบ');
+      }
+    }
+
+    function updateAdminCredentials() {
+      const newUser = document.getElementById('changeAdminUser').value.trim();
+      const curPass = document.getElementById('currentAdminPass').value;
+      const newPass = document.getElementById('newAdminPass').value;
+      const confPass = document.getElementById('confirmAdminPass').value;
+      const creds = getAdminCredentials();
+
+      if (!newUser) {
+        showToast('กรุณาระบุชื่อผู้ดูแลระบบ (Username)', 'error');
+        return;
+      }
+      if (curPass !== creds.password) {
+        showToast('รหัสผ่านปัจจุบันไม่ถูกต้อง', 'error');
+        return;
+      }
+      if (newPass.length < 4) {
+        showToast('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร', 'error');
+        return;
+      }
+      if (newPass !== confPass) {
+        showToast('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน', 'error');
+        return;
+      }
+
+      const updated = { username: newUser, password: newPass, updatedAt: new Date().toISOString() };
+      localStorage.setItem(ADMIN_CREDS_KEY, JSON.stringify(updated));
+      document.getElementById('adminUserDisplay').textContent = newUser;
+      document.getElementById('currentAdminPass').value = '';
+      document.getElementById('newAdminPass').value = '';
+      document.getElementById('confirmAdminPass').value = '';
+
+      showToast('อัปเดตข้อมูลผู้ดูแลระบบและรหัสผ่านใหม่สำเร็จ!', 'success');
+      logEvent('AUTH', `เปลี่ยนรหัสผ่านผู้ดูแลระบบ (${newUser})`);
+    }
+
+    function resetAdminCredentials() {
+      if (confirm('ต้องการรีเซ็ตรหัสผ่านผู้ดูแลเป็นค่าเริ่มต้น (admin / admin123) ใช่หรือไม่?')) {
+        localStorage.removeItem(ADMIN_CREDS_KEY);
+        document.getElementById('changeAdminUser').value = 'admin';
+        document.getElementById('adminUserDisplay').textContent = 'admin';
+        document.getElementById('currentAdminPass').value = '';
+        document.getElementById('newAdminPass').value = '';
+        document.getElementById('confirmAdminPass').value = '';
+        showToast('รีเซ็ตรหัสผ่านเป็น admin / admin123 เรียบร้อยแล้ว', 'info');
+        logEvent('AUTH', 'รีเซ็ตรหัสผ่านผู้ดูแลระบบเป็นค่าเริ่มต้น');
+      }
+    }
+
+    // 22 Guns Data (Model definitions matching js/guns.js)
+    const GUN_DATA = [
+      { id: 'Carbine M4A1', cat: 'rifle', type: 'Assault Rifle', mag: 30, rld: 48, fx: 'rifle', dps: '1.0x', desc: 'ปืนไรเฟิลจู่โจมมาตรฐานของกองทัพ เสถียรและยิงต่อเนื่องได้ดี' },
+      { id: 'Assault Rifle AK-74', cat: 'rifle', type: 'Assault Rifle', mag: 30, rld: 52, fx: 'rifle', dps: '1.15x', desc: 'ไรเฟิลพลังทำลายสูง กระสุนหนัก เหมาะแก่การกำจัดซอมบี้ระยะกลาง' },
+      { id: 'Tactical SCAR-H', cat: 'rifle', type: 'Assault Rifle', mag: 24, rld: 45, fx: 'rifle', dps: '1.3x', desc: 'ปืนคอมแบทโมเดิร์น ยิงแม่นยำสูง ดาเมจต่อกระสุนสูงมาก' },
+      { id: 'G36 Battle Rifle', cat: 'rifle', type: 'Assault Rifle', mag: 30, rld: 44, fx: 'rifle', dps: '1.45x', desc: 'ไรเฟิลคอมโพสิตน้ำหนักเบา รีโหลดรวดเร็ว คล่องตัวในวงล้อม' },
+      { id: 'Prototype Rail-Rifle', cat: 'rifle', type: 'Assault Rifle', mag: 25, rld: 40, fx: 'rail', dps: '1.7x', desc: 'ปืนเรลกันทดลอง กระสุนพลังแม่เหล็กทะลวงเกราะและสร้างคลื่นไฟฟ้า' },
+      
+      { id: 'Hunting Rifle .308', cat: 'sniper', type: 'Sniper Rifle', mag: 5, rld: 56, fx: 'sniper', dps: '1.2x', desc: 'ปืนล่าสัตว์ลำกล้องยาว นัดเดียวจอดสำหรับซอมบี้ระดับเริ่มต้น' },
+      { id: 'Scout Rifle SVD', cat: 'sniper', type: 'Sniper Rifle', mag: 10, rld: 50, fx: 'sniper', dps: '1.5x', desc: 'สไนเปอร์กึ่งอัตโนมัติ ยิงซ้ำได้ต่อเนื่อง เก็บเป้าหมายได้อย่างแม่นยำ' },
+      { id: 'AWM Precision Sniper', cat: 'sniper', type: 'Sniper Rifle', mag: 6, rld: 60, fx: 'sniper', dps: '2.0x', desc: 'ปืนซุ่มยิงความแม่นยำสูงสุด ล้มเป้าหมายขนาดกลางได้ในนัดเดียว' },
+      { id: 'Anti-Materiel .50 Cal', cat: 'sniper', type: 'Sniper Rifle', mag: 5, rld: 68, fx: 'sniper', dps: '2.6x', desc: 'ปืนต่อต้านยุทโธปกรณ์ขนาดหนัก ยิงทะลวงกระดูกซอมบี้ยักษ์และเกราะหนา' },
+      { id: 'Gauss Long-Rifle', cat: 'sniper', type: 'Sniper Rifle', mag: 8, rld: 48, fx: 'rail', dps: '3.2x', desc: 'สุดยอดปืนสไนเปอร์เกาส์ ยิงลำแสงพลังงานทะลุผ่านฝูงซอมบี้เป็นแนวยาว' },
+
+      { id: 'Combat Shotgun 12G', cat: 'heavy', type: 'Shotgun', mag: 8, rld: 54, fx: 'shotgun', dps: '1.1x', desc: 'ลูกซองคอมแบท กระสุนลูกปรายกระจายกว้าง กวาดล้างซอมบี้ประชิดตัว' },
+      { id: 'Submachine MP5', cat: 'heavy', type: 'SMG', mag: 32, rld: 38, fx: 'rifle', dps: '1.3x', desc: 'ปืนกลมืออัตราการยิงสูง คล่องตัวสูง รีโหลดเร็วเป็นพิเศษ' },
+      { id: 'M249 Light Machine Gun', cat: 'heavy', type: 'LMG', mag: 60, rld: 74, fx: 'heavy', dps: '1.8x', desc: 'ปืนกลเบาสายยิงกดดัน แม็กกาซีนกล่อง 60 นัด เหมาะกับหยุดฝูงบุก' },
+      { id: 'Rotary Minigun', cat: 'heavy', type: 'Heavy Weapon', mag: 90, rld: 84, fx: 'heavy', dps: '2.4x', desc: 'มินิกัน 6 ลำกล้องหมุน กระหน่ำห่ากระสุน 90 นัดอย่างต่อเนื่อง' },
+      { id: 'Plasma Cannon', cat: 'heavy', type: 'Energy Cannon', mag: 18, rld: 56, fx: 'plasma', dps: '2.9x', desc: 'ปืนใหญ่พลาสม่า ยิงลูกบอลพลังงานร้อนจัด ระเบิดเป็นวงกว้าง' },
+
+      { id: 'Goliath Battle Rifle', cat: 'secret', type: 'Boss Weapon', mag: 36, rld: 40, fx: 'rail', dps: '2.5x', desc: 'คราฟต์จากชิ้นส่วนแกน The Goliath Tank เสริมพลังน้ำแข็งเยือกแข็ง' },
+      { id: 'Goliath Heavy Sniper', cat: 'secret', type: 'Boss Weapon', mag: 10, rld: 46, fx: 'rail', dps: '3.5x', desc: 'สไนเปอร์คราฟต์บอส ยิงกระสุนเยือกแข็งแช่แข็งซอมบี้ให้อยู่กับที่' },
+      { id: 'Goliath Heavy Autocannon', cat: 'secret', type: 'Boss Weapon', mag: 75, rld: 64, fx: 'rail', dps: '3.8x', desc: 'ปืนกลหนักลำกล้องคู่พลังงานเยือกแข็ง ยิงสาดรัวพร้อมดาเมจมหาศาล' },
+      
+      { id: 'Omega Assault Rifle', cat: 'secret', type: 'Boss Weapon', mag: 40, rld: 38, fx: 'plasma', dps: '3.4x', desc: 'สร้างจากสารกลายพันธุ์ Abyssal Omega กระสุนพลาสม่ามิติอเวจี' },
+      { id: 'Omega Rail-Sniper', cat: 'secret', type: 'Boss Weapon', mag: 12, rld: 44, fx: 'plasma', dps: '4.2x', desc: 'สไนเปอร์อเวจี ยิงทะลุกำแพงและสร้างหลุมยุบพลาสม่าดูดกลืนเป้าหมาย' },
+      { id: 'Omega Rotary Minigun', cat: 'secret', type: 'Boss Weapon', mag: 100, rld: 68, fx: 'plasma', dps: '4.8x', desc: 'สุดยอดมินิกันอเวจี บรรจุ 100 นัด เผาผลาญทุกอย่างตรงหน้าจนราบคาบ' },
+
+      { id: 'Legendary AK-47 Golden', cat: 'secret', type: 'Secret Prototype', mag: 45, rld: 34, fx: 'rifle', dps: '5.0x', desc: 'ปืนทองคำในตำนานที่ซ่อนอยู่ในสมรภูมิ ยิงเร็ว แรง ไร้แรงถีบ และรีโหลดพริบตา' }
+    ];
+
+    // State Variables
+    let currentSave = null;
+    let currentSettings = null;
+    let customGames = [];
+
+    // Toast Utility
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Logger
+    function logEvent(tag, message) {
+      const consoleEl = document.getElementById('logConsole');
+      if (!consoleEl) return;
+      const now = new Date().toTimeString().split(' ')[0];
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-time">[${now}]</span><span class="log-tag">[${tag}]</span><span class="log-msg">${message}</span>`;
+      consoleEl.prepend(line);
+    }
+
+    // Clock
+    setInterval(() => {
+      const el = document.getElementById('liveClock');
+      if (el) el.textContent = new Date().toLocaleTimeString('th-TH');
+    }, 1000);
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll('.sidebar .nav-item').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.tab-pane').forEach(el => {
+        el.classList.toggle('active', el.id === 'tab-' + tabId);
+      });
+      logEvent('NAV', `สลับไปยังหน้า: ${tabId}`);
+      if (tabId === 'map' && typeof drawTacMap === 'function') drawTacMap();
+    }
+
+    document.querySelectorAll('.sidebar .nav-item[data-tab]').forEach(item => {
+      item.addEventListener('click', () => switchTab(item.dataset.tab));
+    });
+
+    // Populate Weapon Options in Save Editor
+    function populateWeaponSelect() {
+      const sel = document.getElementById('editWeaponSelect');
+      sel.innerHTML = '';
+      GUN_DATA.forEach(gun => {
+        const opt = document.createElement('option');
+        opt.value = gun.id;
+        opt.textContent = `${gun.id} (${gun.type} · DPS ${gun.dps})`;
+        sel.appendChild(opt);
+      });
+    }
+
+    // Armory Rendering
+    function renderArmory(filter = 'all') {
+      const grid = document.getElementById('armoryGrid');
+      grid.innerHTML = '';
+      const list = filter === 'all' ? GUN_DATA : GUN_DATA.filter(g => g.cat === filter);
+
+      list.forEach(gun => {
+        const card = document.createElement('div');
+        card.className = 'weapon-card';
+        card.innerHTML = `
+          <div class="weapon-canvas-box">
+            <canvas id="gunCanvas_${gun.id.replace(/[^a-zA-Z0-9]/g, '_')}" width="96" height="48"></canvas>
+          </div>
+          <div>
+            <div class="weapon-title">${gun.id}</div>
+            <span class="game-tag" style="margin-bottom:6px; display:inline-block;">${gun.type}</span>
+          </div>
+          <div class="weapon-stats-list">
+            <span>แม็กกาซีน: <b>${gun.mag} นัด</b></span>
+            <span>รีโหลด: <b>${(gun.rld / 60).toFixed(1)}s</b></span>
+            <span>พลังทำลาย: <b>${gun.dps}</b></span>
+            <span>กระสุน: <b>${gun.fx}</b></span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.4;">${gun.desc}</p>
+          <button class="btn btn-outline btn-sm" style="margin-top:auto;" onclick="equipGunToSave('${gun.id}')">
+            ⚡ สวมใส่ให้ตัวละครทันที
+          </button>
+        `;
+        grid.appendChild(card);
+        drawGunPreview(gun);
+      });
+    }
+
+    function filterWeapons(cat) {
+      renderArmory(cat);
+      logEvent('ARMORY', `กรองอาวุธตามหมวดหมู่: ${cat}`);
+    }
+
+    // Draw stylish stylized pixel weapon silhouette
+    function drawGunPreview(gun) {
+      setTimeout(() => {
+        const canvasId = 'gunCanvas_' + gun.id.replace(/[^a-zA-Z0-9]/g, '_');
+        const cv = document.getElementById(canvasId);
+        if (!cv) return;
+        const ctx = cv.getContext('2d');
+        ctx.clearRect(0, 0, 96, 48);
+
+        // Draw tactical grid
+        ctx.strokeStyle = '#161928';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < 96; x += 12) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 48); ctx.stroke(); }
+        for (let y = 0; y < 48; y += 12) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(96, y); ctx.stroke(); }
+
+        // Render gun barrel & stock stylized
+        const isSecret = gun.cat === 'secret';
+        const isSniper = gun.cat === 'sniper';
+        const isHeavy = gun.cat === 'heavy';
+
+        ctx.fillStyle = isSecret ? (gun.id.includes('Golden') ? '#f8b800' : '#b060ff') : isSniper ? '#64b5f6' : isHeavy ? '#ff8a65' : '#81c784';
+        
+        // Barrel
+        ctx.fillRect(isSniper ? 20 : 30, 20, isSniper ? 50 : 36, 6);
+        // Body
+        ctx.fillRect(36, 18, 24, 10);
+        // Stock
+        ctx.fillRect(18, 22, 18, 8);
+        // Grip & Mag
+        ctx.fillRect(38, 28, 6, 10);
+        ctx.fillRect(48, 26, 6, 12);
+        // Muzzle highlight
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(isSniper ? 70 : 66, 19, 4, 8);
+      }, 50);
+    }
+
+    // Equip gun to save directly from Armory
+    function equipGunToSave(gunName) {
+      loadSaveData();
+      if (!currentSave) createFreshSave();
+      currentSave.weapon = { name: gunName, plus: (currentSave.weapon && currentSave.weapon.plus) || 3 };
+      saveSaveData();
+      showToast(`สวมใส่ ${gunName} เรียบร้อยแล้ว!`, 'success');
+      logEvent('CHEAT', `สวมใส่อาวุธ ${gunName} ผ่าน Armory`);
+    }
+
+    // ==================== SAVE GAME OPERATIONS ====================
+    function loadSaveData() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (raw) {
+          currentSave = JSON.parse(raw);
+          logEvent('SAVE', `ตรวจพบไฟล์เซฟ ${SAVE_KEY} เลเวล ${currentSave.lvl || 1}`);
+        } else {
+          currentSave = null;
+          logEvent('SAVE', 'ยังไม่พบไฟล์เซฟในระบบ (สามารถกดสร้างเซฟเริ่มต้นได้)');
+        }
+      } catch (e) {
+        console.error('Failed to parse save', e);
+        currentSave = null;
+      }
+      updateDashboardUI();
+    }
+
+    function createFreshSave() {
+      currentSave = {
+        cls: 'assault',
+        lvl: 1,
+        xp: 0,
+        gold: 500,
+        potions: 5,
+        hp: 100,
+        mp: 50,
+        inv: [],
+        stash: [],
+        weapon: { name: 'Carbine M4A1', plus: 0 },
+        armor: { name: 'Tactical Kevlar Vest', def: 3 },
+        helm: { name: 'Field Beret', def: 1 },
+        boots: { name: 'Combat Boots', def: 1 },
+        ring: null,
+        x: 20, y: 20,
+        story: 1, sq: 0, sprog: 0, bounty: 0,
+        sp: 3,
+        tree: {},
+        skillLv: [1, 0],
+        akFound: false,
+        kills: 0,
+        quickId: 0,
+        pet: 'none',
+        bestWave: 0,
+        bestRift: 0,
+        achieve: {},
+        title: 'Operative',
+        stats: { kills: 0, deaths: 0 }
+      };
+      saveSaveData();
+      showToast('สร้างข้อมูลเซฟเริ่มต้นใหม่เรียบร้อยแล้ว!', 'success');
+      logEvent('SAVE', 'สร้างข้อมูลเซฟใหม่สำหรับทดสอบ');
+    }
+
+    function saveSaveData() {
+      if (!currentSave) return;
+
+      // Read from form inputs
+      currentSave.cls = document.getElementById('editClass').value;
+      currentSave.lvl = parseInt(document.getElementById('editLvl').value, 10) || 1;
+      currentSave.xp = parseInt(document.getElementById('editXP').value, 10) || 0;
+      currentSave.gold = parseInt(document.getElementById('editGold').value, 10) || 0;
+      currentSave.scrap = parseInt(document.getElementById('editScrap').value, 10) || 0;
+      currentSave.sp = parseInt(document.getElementById('editSP').value, 10) || 0;
+      currentSave.hp = parseInt(document.getElementById('editHP').value, 10) || 100;
+      currentSave.mp = parseInt(document.getElementById('editMP').value, 10) || 50;
+      currentSave.potions = parseInt(document.getElementById('editPotions').value, 10) || 0;
+      currentSave.kills = parseInt(document.getElementById('editKills').value, 10) || 0;
+      currentSave.title = document.getElementById('editTitle').value || 'Operative';
+      currentSave.pet = document.getElementById('editPet').value;
+
+      // Weapon
+      const wpName = document.getElementById('editWeaponSelect').value;
+      const wpPlus = parseInt(document.getElementById('editWeaponPlus').value, 10) || 0;
+      currentSave.weapon = { name: wpName, plus: wpPlus };
+
+      // Commit to LocalStorage
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
+        showToast('บันทึกข้อมูลเซฟลงระบบสำเร็จแล้ว!', 'success');
+        logEvent('SAVE', `บันทึกเซฟสำเร็จ: ${currentSave.cls} Lv.${currentSave.lvl} (Gold: ${currentSave.gold})`);
+        sendGameCmd('CMD_SYNC_SAVE');
+        updateDashboardUI();
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาดในการบันทึกเซฟ: ' + err.message, 'error');
+      }
+    }
+
+    function updateOverviewSystemStats() {
+      // 1. Total Games
+      const coreCount = 3;
+      const customCount = customGames ? customGames.length : 0;
+      const totalCount = coreCount + customCount;
+      const totalGamesEl = document.getElementById('kpiTotalGames');
+      const breakdownEl = document.getElementById('kpiGamesBreakdown');
+      if (totalGamesEl) totalGamesEl.textContent = totalCount;
+      if (breakdownEl) breakdownEl.textContent = `RPG 1 · Arcade 1 · Tool 1${customCount > 0 ? ` · Custom ${customCount}` : ''}`;
+      
+      const gameCountTag = document.getElementById('gameCountTag');
+      if (gameCountTag) gameCountTag.textContent = totalCount;
+
+      // 2. Storage Analysis
+      const rawSave = localStorage.getItem(SAVE_KEY) || '';
+      const rawSettings = localStorage.getItem(SETTINGS_KEY) || '';
+      const rawCustom = localStorage.getItem(CUSTOM_GAMES_KEY) || '';
+      
+      let rawSnapshots = '';
+      let activeSlots = 0;
+      for (let i = 1; i <= 3; i++) {
+        const s = localStorage.getItem(SNAPSHOT_PREFIX + i);
+        if (s) {
+          rawSnapshots += s;
+          activeSlots++;
+        }
+      }
+
+      const lenSave = rawSave.length * 2;
+      const lenSettings = rawSettings.length * 2;
+      const lenCustom = rawCustom.length * 2;
+      const lenSnapshots = rawSnapshots.length * 2;
+      const totalBytes = lenSave + lenSettings + lenCustom + lenSnapshots;
+      const totalKB = (totalBytes / 1024).toFixed(1);
+
+      const kpiStorage = document.getElementById('kpiTotalStorage');
+      if (kpiStorage) kpiStorage.textContent = `${totalKB} KB`;
+
+      const kpiSnapshots = document.getElementById('kpiActiveSnapshots');
+      if (kpiSnapshots) kpiSnapshots.textContent = `${activeSlots} / 3`;
+
+      // Storage Segments
+      const sizeSaveEl = document.getElementById('sizeSave');
+      const sizeSettingsEl = document.getElementById('sizeSettings');
+      const sizeCustomEl = document.getElementById('sizeCustom');
+      const sizeSnapshotsEl = document.getElementById('sizeSnapshots');
+      const storagePctEl = document.getElementById('storageUsedPct');
+
+      if (sizeSaveEl) sizeSaveEl.textContent = (lenSave / 1024).toFixed(1) + ' KB';
+      if (sizeSettingsEl) sizeSettingsEl.textContent = (lenSettings / 1024).toFixed(1) + ' KB';
+      if (sizeCustomEl) sizeCustomEl.textContent = (lenCustom / 1024).toFixed(1) + ' KB';
+      if (sizeSnapshotsEl) sizeSnapshotsEl.textContent = (lenSnapshots / 1024).toFixed(1) + ' KB';
+
+      const quotaPct = Math.max(0.1, (totalBytes / (5 * 1024 * 1024)) * 100);
+      if (storagePctEl) storagePctEl.textContent = quotaPct.toFixed(2) + '% Used (of 5 MB)';
+
+      const safeTotal = Math.max(1, totalBytes);
+      const segSave = document.getElementById('segSave');
+      const segSettings = document.getElementById('segSettings');
+      const segCustom = document.getElementById('segCustom');
+      const segSnapshots = document.getElementById('segSnapshots');
+
+      if (segSave) segSave.style.width = Math.max(5, (lenSave / safeTotal) * 100) + '%';
+      if (segSettings) segSettings.style.width = Math.max(5, (lenSettings / safeTotal) * 100) + '%';
+      if (segCustom) segCustom.style.width = Math.max(5, (lenCustom / safeTotal) * 100) + '%';
+      if (segSnapshots) segSnapshots.style.width = Math.max(5, (lenSnapshots / safeTotal) * 100) + '%';
+
+      // Biohazard Save Status in table
+      const bioStatus = document.getElementById('adminBiohazardSaveStatus');
+      if (bioStatus) {
+        if (currentSave && currentSave.lvl) {
+          bioStatus.innerHTML = `<span style="color:var(--emerald); font-weight:600;">เซฟปกติ (Lv.${currentSave.lvl} · ${(currentSave.gold||0).toLocaleString()}G)</span>`;
+        } else {
+          bioStatus.innerHTML = `<span style="color:var(--text-dim);">ยังไม่มีเซฟ</span>`;
+        }
+      }
+
+      renderAdminCustomRows();
+    }
+
+    function renderAdminCustomRows() {
+      const tbody = document.getElementById('adminGamesTableBody');
+      if (!tbody) return;
+      document.querySelectorAll('.admin-custom-row').forEach(r => r.remove());
+
+      if (!customGames) return;
+      customGames.forEach((g, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'admin-custom-row';
+        tr.innerHTML = `
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:22px;">${g.icon || '🎮'}</span>
+              <div>
+                <b style="color:#fff;">${g.title}</b>
+                <div style="font-size:11px; color:var(--text-dim);">${g.url}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="game-tag" style="color:var(--purple); border-color:rgba(179,136,255,0.3);">${g.category || 'Custom'}</span></td>
+          <td>Web HTML / External</td>
+          <td><span style="color:var(--text-muted);">Custom App</span></td>
+          <td><span class="live-badge online" style="font-size:10px; padding:2px 8px;">พร้อมให้บริการ</span></td>
+          <td style="text-align: right;">
+            <button class="btn btn-primary btn-sm" onclick="openGameModal('${g.url}', '${g.title}')">เปิดเล่น</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCustomGame(${idx})">ลบ</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateDashboardUI() {
+      updateOverviewSystemStats();
+
+      if (!currentSave) {
+        document.getElementById('saveSizeInfo').textContent = 'ขนาดข้อมูล: 0 KB';
+        return;
+      }
+
+      // Save Editor Fields
+      document.getElementById('editClass').value = currentSave.cls || 'assault';
+      document.getElementById('editLvl').value = currentSave.lvl || 1;
+      document.getElementById('levelDisplay').textContent = currentSave.lvl || 1;
+      document.getElementById('editXP').value = currentSave.xp || 0;
+      document.getElementById('editGold').value = currentSave.gold || 0;
+      document.getElementById('editScrap').value = currentSave.scrap || 0;
+      renderSaveBuildsInfo();
+      document.getElementById('editSP').value = currentSave.sp || 0;
+      document.getElementById('editHP').value = currentSave.hp || 100;
+      document.getElementById('editMP').value = currentSave.mp || 50;
+      document.getElementById('editPotions').value = currentSave.potions || 3;
+      document.getElementById('editKills').value = currentSave.kills || 0;
+      document.getElementById('editTitle').value = currentSave.title || 'Operative';
+      document.getElementById('editPet').value = currentSave.pet || 'none';
+
+      // Weapon in editor
+      if (currentSave.weapon && currentSave.weapon.name) {
+        document.getElementById('editWeaponSelect').value = currentSave.weapon.name;
+        document.getElementById('editWeaponPlus').value = currentSave.weapon.plus || 0;
+      }
+
+      onClassChange();
+
+      // Technical info
+      const raw = localStorage.getItem(SAVE_KEY) || '';
+      document.getElementById('saveSizeInfo').textContent = `ขนาดข้อมูล: ${(raw.length / 1024).toFixed(2)} KB`;
+    }
+
+    function onClassChange() {
+      const cls = document.getElementById('editClass').value;
+      const avatarIcon = document.getElementById('editorAvatarIcon');
+      const avatarClass = document.getElementById('editorAvatarClass');
+
+      if (cls === 'assault') {
+        avatarIcon.textContent = '🎖️';
+        avatarClass.textContent = 'Assault Specialist';
+        avatarClass.style.color = 'var(--cyan)';
+      } else if (cls === 'sniper') {
+        avatarIcon.textContent = '🎯';
+        avatarClass.textContent = 'Recon Sniper';
+        avatarClass.style.color = 'var(--emerald)';
+      } else {
+        avatarIcon.textContent = '🛡️';
+        avatarClass.textContent = 'Heavy Gunner';
+        avatarClass.style.color = 'var(--amber)';
+      }
+    }
+
+    // ==================== BASE CONSTRUCTION (save) ====================
+    const BUILD_NAMES = { sandbag: 'แนวกระสอบทราย', wire: 'ลวดหนามใบมีด', hesco: 'กำแพง HESCO', steel: 'กำแพงเหล็ก', sentry: 'ป้อมปืนกล .50',
+      flame: 'กับดักไฟ', acid: 'กับดักกรด', ammo: 'คลังกระสุน', light: 'ไฟสปอตไลท์' };
+    function renderSaveBuildsInfo() {
+      const el = document.getElementById('editBuildsInfo');
+      if (!el) return;
+      const list = (currentSave && Array.isArray(currentSave.builds)) ? currentSave.builds : [];
+      const counts = {};
+      for (const b of list) counts[b[0]] = (counts[b[0]] || 0) + 1;
+      const parts = Object.entries(counts).map(([id, n]) => `${BUILD_NAMES[id] || id} ${n}`);
+      el.textContent = list.length ? `${list.length} ชิ้น · ${parts.join(', ')}` : 'ยังไม่มีสิ่งปลูกสร้าง';
+    }
+    function clearAllStructures() {
+      if (!confirm('รื้อสิ่งปลูกสร้างทั้งหมดในฐาน? (ไม่คืนเศษเหล็กและเงิน)')) return;
+      if (!currentSave) createFreshSave();
+      currentSave.builds = [];
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave)); } catch (e) {}
+      sendGameCmd('CMD_CLEAR_BUILDS');
+      renderSaveBuildsInfo();
+      showToast('รื้อสิ่งปลูกสร้างทั้งหมดแล้ว', 'success');
+      logEvent('BASE', 'รื้อสิ่งปลูกสร้างทั้งหมดในเซฟ');
+    }
+
+    // ==================== LIVE TACTICAL MAP ====================
+    let tacMap = null, tacImg = null, tacMarkers = null, tacNight = 0, tacMapAsked = 0;
+    function onWorldMap(m) {
+      tacMap = m; tacImg = new Image();
+      tacImg.onload = () => { document.getElementById('tacEmpty').style.display = 'none'; drawTacMap(); };
+      tacImg.src = m.png;
+      logEvent('MAP', `โหลดแผนที่โลก ${m.w}x${m.h} ช่อง`);
+    }
+    function drawTacMap() {
+      const cv = document.getElementById('tacCanvas');
+      if (!cv || !tacMap || !tacImg || !tacImg.complete) return;
+      const g = cv.getContext('2d'), W = cv.width, H = cv.height, sx = W / tacMap.w, sy = H / tacMap.h;
+      g.imageSmoothingEnabled = false;
+      g.clearRect(0, 0, W, H);
+      g.drawImage(tacImg, 0, 0, W, H);
+      if (tacNight > 0) { g.fillStyle = `rgba(10,14,40,${0.45 * tacNight})`; g.fillRect(0, 0, W, H); }
+      const m = tacMarkers;
+      const dot = (x, y, r, fill, stroke) => { g.beginPath(); g.arc(x * sx, y * sy, r, 0, 6.283); g.fillStyle = fill; g.fill(); if (stroke) { g.lineWidth = 1.5; g.strokeStyle = stroke; g.stroke(); } };
+      const box = (x, y, w, h, fill, stroke) => { g.fillStyle = fill; g.fillRect(x * sx - w / 2, y * sy - h / 2, w, h); if (stroke) { g.lineWidth = 1.5; g.strokeStyle = stroke; g.strokeRect(x * sx - w / 2, y * sy - h / 2, w, h); } };
+      const tag = (x, y, s, col) => { g.font = 'bold 12px sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(s, x * sx, y * sy - 12); g.fillStyle = col; g.fillText(s, x * sx, y * sy - 12); };
+      if (document.getElementById('tacShowLabels').checked) for (const l of tacMap.labels || []) {
+        g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.75)';
+        g.strokeText(l.name, l.x * sx, l.y * sy); g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(l.name, l.x * sx, l.y * sy);
+      }
+      if (!m || !m.inWorld) return;
+      if (document.getElementById('tacShowBuilds').checked) for (const [x, y] of m.builds) box(x + 0.5, y + 0.5, sx, sy, 'rgba(192,200,216,.9)');
+      if (document.getElementById('tacShowZombies').checked) for (const [x, y, horde] of m.enemies) dot(x, y, 2.6, horde ? '#ff9a2a' : '#ff4040');
+      for (const [x, y] of m.soldiers) dot(x, y, 2.4, '#58a8ff');
+      for (const [x, y] of m.bots) dot(x, y, 2.8, '#58a8ff', '#ffffff');
+      for (const [x, y, st] of m.tanks) box(x, y, 14, 8, st === 'ok' ? '#e8d48a' : st === 'wrecked' ? '#5a3020' : '#b08a40', '#000');
+      for (const [x, y] of m.tow) box(x, y, 10, 7, '#ffb020', '#000');
+      for (const [x, y, call, st, patrol] of m.btrs) {
+        const qrf = call === 'CHARLIE';
+        box(x, y, 14, 8, st !== 'ok' ? '#5a3020' : qrf ? '#60e0ff' : '#9ad868', '#000');
+        if (patrol !== 'garage') tag(x, y, qrf ? 'QRF' : call + (patrol === 'hold' ? ' (รอกำลังเสริม)' : ''), qrf ? '#60e0ff' : st !== 'ok' ? '#ff8060' : '#c8f0a0');
+      }
+      for (const [x, y, name] of m.bosses) { dot(x, y, 7, '#ff40ff', '#000'); tag(x, y, name, '#ff9cff'); }
+      drawSituationOverlay(g, sx, sy);
+      const [px, py] = m.player, pulse = 5 + (Date.now() / 160 % 4);
+      g.beginPath(); g.arc(px * sx, py * sy, pulse + 4, 0, 6.283); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke();
+      dot(px, py, 5, '#ffffff', '#000'); tag(px, py, 'YOU', '#ffffff');
+    }
+    function updateTacMap(t) {
+      tacMarkers = t.map || null; tacNight = t.night || 0;
+      const ss = document.getElementById('specState');
+      if (ss) ss.innerHTML = t.spectator ? `<b style="color:#60e0ff">● กล้องแอดมินเปิดอยู่</b> · ${t.spectator.paused ? 'หยุดเวลา' : 'ความเร็ว ' + t.spectator.speed + 'x'}${t.spectator.follow ? ' · ติดตาม ' + escHtml(t.spectator.follow) : ''}` : 'ผู้เล่นกำลังบังคับตัวละคร';
+      renderSituation(t.situation);
+      const note = document.getElementById('tacNightNote');
+      if (note) note.innerHTML = tacNight > 0.3 ? '<span style="color:#ff6060; font-weight:bold;">🌙 กลางคืน: ซอมบี้คลั่ง (ทนขึ้น โหดขึ้น เร็วขึ้น)</span>' : '';
+      if (!tacMap && Date.now() - tacMapAsked > 3000) { tacMapAsked = Date.now(); sendGameCmd('CMD_REQUEST_MAP'); }
+      drawTacMap();
+    }
+    setInterval(() => { if (tacMarkers) drawTacMap(); }, 250);   // keep the player marker pulsing
+
+    // ==================== SITUATION PICTURE (who is doing what) ====================
+    const UNIT_ICON = { air: '✈️', player: '🎖️', bot: '👤', btr: '🚙', qrf: '🚑', tank: '🛡️', tow: '🔧', medic: '⛑️', soldier: '🪖', boss: '☠️' };
+    const UNIT_COL = { air: '#ffb040', player: '#ffffff', bot: '#58a8ff', btr: '#9ad868', qrf: '#60e0ff', tank: '#e8d48a', tow: '#ffb020', medic: '#ff8080', soldier: '#58a8ff', boss: '#ff40ff' };
+    const UNIT_ORDER = ['air', 'player', 'qrf', 'btr', 'tank', 'tow', 'medic', 'soldier', 'bot', 'boss'];
+    const UNIT_GROUP = { people: ['player', 'bot', 'medic', 'soldier'], vehicles: ['air', 'btr', 'qrf', 'tank', 'tow'], boss: ['boss'] };
+    let sitUnits = [], sitEvents = [], sitSeen = new Set(), sitSel = null, sitHover = null, sitPing = null, sitUnitF = 'all', sitEventF = 'all';
+    function sitHp(u) { const pct = Math.max(0, Math.min(100, u.hp / u.max * 100)); return { pct, col: pct > 50 ? 'var(--emerald)' : pct > 25 ? 'var(--amber)' : 'var(--crimson)' }; }
+    function renderSituation(sit) {
+      if (!sit) return;
+      sitUnits = sit.inWorld ? (sit.units || []) : [];
+      for (const e of sit.events || []) if (!sitSeen.has(e.id)) { sitSeen.add(e.id); sitEvents.push(e); }
+      if (sitEvents.length > 200) sitEvents = sitEvents.slice(-200);
+      // roster
+      const list = sitUnits.filter(u => sitUnitF === 'all' || UNIT_GROUP[sitUnitF].includes(u.kind))
+        .sort((a, b) => UNIT_ORDER.indexOf(a.kind) - UNIT_ORDER.indexOf(b.kind));
+      document.getElementById('sitUnitCount').textContent = sitUnits.length ? `· ${sitUnits.length} หน่วย` : '';
+      document.getElementById('sitUnits').innerHTML = list.map(u => {
+        const hp = sitHp(u), noHp = u.kind === 'tow';
+        return `<div class="unit-row${u.id === sitSel ? ' sel' : ''}" data-id="${escHtml(u.id)}">
+          <span class="unit-ico">${UNIT_ICON[u.kind] || '•'}</span>
+          <span class="unit-name" style="color:${UNIT_COL[u.kind] || '#fff'}">${escHtml(u.name)}</span>
+          <span class="unit-zone">${escHtml(u.zone || '')}</span>
+          <span class="unit-act">${escHtml(u.act)}${u.squad !== undefined ? ` · ทหาร ${u.squad}` : ''}${u.cargo ? ` · ${escHtml(u.cargo)}` : ''}</span>
+          ${noHp ? '' : `<div class="unit-hp"><div style="width:${hp.pct}%; background:${hp.col}"></div></div>`}
+        </div>`;
+      }).join('') || `<div class="unit-act">${sit.inWorld ? 'ไม่มีหน่วยในกลุ่มนี้' : 'ผู้เล่นอยู่นอกโลกหลัก (ดันเจี้ยน / แมพพิเศษ)'}</div>`;
+      renderSelected();
+      // situation log (newest first)
+      const now = Date.now();
+      document.getElementById('sitEvents').innerHTML = sitEvents.filter(e => sitEventF === 'all' || e.kind === sitEventF).slice().reverse().slice(0, 120).map(e => {
+        const d = new Date(e.t), tm = d.toLocaleTimeString('th-TH', { hour12: false });
+        return `<div class="ev-row${now - e.t < 1500 ? ' new' : ''}" style="border-left-color:${escHtml(e.c)}" data-x="${e.x ?? ''}" data-y="${e.y ?? ''}">
+          <span class="ev-time">${tm}</span><span style="color:${escHtml(e.c)}">${escHtml(e.txt)}</span></div>`;
+      }).join('') || '<div class="unit-act">ยังไม่มีเหตุการณ์</div>';
+    }
+    function renderSelected() {
+      const box = document.getElementById('sitSelected'), u = sitUnits.find(v => v.id === sitSel);
+      if (!u) { box.innerHTML = ''; return; }
+      const hp = sitHp(u);
+      box.innerHTML = `<div class="sel-card">
+        <div style="display:flex; justify-content:space-between; gap:8px;"><b style="color:${UNIT_COL[u.kind]}">${UNIT_ICON[u.kind] || ''} ${escHtml(u.name)}</b>
+          <a href="#" onclick="sitSel=null; renderSelected(); drawTacMap(); return false;" style="color:var(--text-dim); font-size:11px;">ยกเลิกการเลือก ✕</a></div>
+        <div><span class="k">กำลังทำ:</span> ${escHtml(u.act)}</div>
+        <div><span class="k">ตำแหน่ง:</span> ${escHtml(u.zone || '-')} (X ${u.x}, Y ${u.y})</div>
+        ${u.kind === 'tow' ? '' : `<div><span class="k">HP:</span> ${u.hp.toLocaleString()} / ${u.max.toLocaleString()} (${hp.pct.toFixed(0)}%)</div>`}
+        ${u.squad !== undefined ? `<div><span class="k">ทหารในหน่วย:</span> ${u.squad}</div>` : ''}
+        ${u.cargo ? `<div><span class="k">ของในรถ:</span> ${escHtml(u.cargo)}</div>` : ''}
+        ${u.kind === 'player' ? '' : `<button class="btn btn-outline btn-sm" style="margin-top:8px;" data-id="${escHtml(u.id)}" onclick="sendGameCmd('CMD_SPECTATE', { on: true, follow: this.dataset.id })">👁 ดูหน่วยนี้ในเกม (กล้องแอดมิน)</button>`}
+      </div>`;
+    }
+    // map overlay: selected unit, hovered unit, pinged event location
+    function drawSituationOverlay(g, sx, sy) {
+      const ring = (x, y, r, col, w) => { g.beginPath(); g.arc(x * sx, y * sy, r, 0, 6.283); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+      const sel = sitUnits.find(u => u.id === sitSel);
+      if (sel) {
+        const r = 14 + (Date.now() / 120 % 8);
+        ring(sel.x, sel.y, r, 'rgba(0,240,255,.9)', 3);
+        g.strokeStyle = 'rgba(0,240,255,.35)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(sel.x * sx, 0); g.lineTo(sel.x * sx, g.canvas.height); g.moveTo(0, sel.y * sy); g.lineTo(g.canvas.width, sel.y * sy); g.stroke();
+      }
+      for (const u of sitUnits) if (u.kind === 'air') {                 // bomber runs: plane icon + target ring
+        g.font = '22px sans-serif'; g.textAlign = 'center'; g.fillText('✈️', u.x * sx, u.y * sy + 8);
+        ring(u.x, u.y, 18 + (Date.now() / 90 % 10), 'rgba(255,176,64,.9)', 2);
+      }
+      if (sitHover && sitHover.id !== sitSel) ring(sitHover.x, sitHover.y, 12, 'rgba(255,255,255,.8)', 2);
+      if (sitPing && Date.now() < sitPing.until) {
+        const k = (sitPing.until - Date.now()) / 2500;
+        ring(sitPing.x, sitPing.y, 10 + (1 - k) * 40, `rgba(255,200,60,${k})`, 3);
+      }
+    }
+    // hover tooltip + click to select on the map
+    (function () {
+      const cv = document.getElementById('tacCanvas'), tip = document.getElementById('tacTip');
+      if (!cv) return;
+      const unitAt = ev => {
+        if (!tacMap || !sitUnits.length) return null;
+        const r = cv.getBoundingClientRect(), kx = cv.width / r.width, ky = cv.height / r.height;
+        const mx = (ev.clientX - r.left) * kx, my = (ev.clientY - r.top) * ky, sx = cv.width / tacMap.w, sy = cv.height / tacMap.h;
+        let best = null, bd = 16 * kx;
+        for (const u of sitUnits) { const d = Math.hypot(u.x * sx - mx, u.y * sy - my); if (d < bd) { bd = d; best = u; } }
+        return best;
+      };
+      cv.addEventListener('mousemove', ev => {
+        const u = unitAt(ev); sitHover = u;
+        if (!u) { tip.style.display = 'none'; return; }
+        const wrap = cv.parentElement.getBoundingClientRect(), hp = sitHp(u);
+        tip.innerHTML = `<b style="color:${UNIT_COL[u.kind]}">${UNIT_ICON[u.kind] || ''} ${escHtml(u.name)}</b>${escHtml(u.act)}<br><span style="color:var(--text-dim)">${escHtml(u.zone || '')}${u.kind === 'tow' ? '' : ` · HP ${hp.pct.toFixed(0)}%`}</span>`;
+        tip.style.display = 'block';
+        const x = ev.clientX - wrap.left + 14, y = ev.clientY - wrap.top + 14;
+        tip.style.left = Math.min(x, wrap.width - tip.offsetWidth - 6) + 'px'; tip.style.top = Math.min(y, wrap.height - tip.offsetHeight - 6) + 'px';
+      });
+      cv.addEventListener('mouseleave', () => { sitHover = null; tip.style.display = 'none'; });
+      cv.addEventListener('click', ev => { const u = unitAt(ev); sitSel = u ? u.id : null; renderSelected(); renderUnitSelection(); drawTacMap(); });
+      document.getElementById('sitUnits').addEventListener('click', ev => {
+        const row = ev.target.closest('.unit-row'); if (!row) return;
+        sitSel = sitSel === row.dataset.id ? null : row.dataset.id; renderSelected(); renderUnitSelection(); drawTacMap();
+      });
+      document.getElementById('sitEvents').addEventListener('click', ev => {
+        const row = ev.target.closest('.ev-row'); if (!row || row.dataset.x === '') return;
+        sitPing = { x: +row.dataset.x, y: +row.dataset.y, until: Date.now() + 2500 }; drawTacMap();
+      });
+      const chips = (id, set) => document.getElementById(id).addEventListener('click', ev => {
+        const b = ev.target.closest('.sit-chip'); if (!b) return;
+        document.querySelectorAll(`#${id} .sit-chip`).forEach(c => c.classList.toggle('on', c === b)); set(b.dataset.f);
+        renderSituation({ inWorld: sitUnits.length > 0, units: sitUnits, events: [] });
+      });
+      chips('sitUnitFilter', f => sitUnitF = f); chips('sitEventFilter', f => sitEventF = f);
+    })();
+    function renderUnitSelection() { document.querySelectorAll('#sitUnits .unit-row').forEach(r => r.classList.toggle('sel', r.dataset.id === sitSel)); }
+
+    // ==================== LIVE BASE OPERATIONS ====================
+    const VEH_STATE = {
+      ok: ['พร้อมรบ', 'ok'], wrecked: ['ถูกทำลาย', 'bad'], towing: ['กำลังถูกลาก', 'work'], repair: ['กำลังซ่อม', 'work'], return: ['ขับกลับประจำจุด', 'move'] };
+    const PATROL_STATE = { garage: 'จอดในโรงรถ', out: 'กำลังลาดตระเวน', stop: 'จอดเคลียร์พื้นที่/เก็บของ', lost: 'เสียหาย', hold: 'ตั้งรับ รอกำลังเสริม', regroup: 'กำลังขึ้นรถ' };
+    const QRF_MISSION = { go: 'กำลังเดินทางไปช่วย', fight: 'กำลังเสริมกำลัง/รบ', board: 'กำลังขึ้นรถ', home: 'กำลังกลับฐาน', lost: 'ถูกทำลาย' };
+    const TOW_PHASE = { out: 'รถลากกำลังไป', hook: 'กำลังเกี่ยวสลิง', drag: 'กำลังลากกลับ' };
+    const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    function vehRow(v, sub) {
+      const st = VEH_STATE[v.state] || [v.state, 'work'], pct = Math.max(0, Math.min(100, v.hp / v.max * 100));
+      const col = pct > 50 ? 'var(--emerald)' : pct > 25 ? 'var(--amber)' : 'var(--crimson)';
+      return `<div class="veh-row"><span class="veh-name">${escHtml(v.name)}</span><span class="veh-badge ${st[1]}">${st[0]}</span>
+        <div class="veh-bar"><div style="width:${pct}%; background:${col};"></div></div>
+        <span class="veh-sub">HP ${v.hp.toLocaleString()} / ${v.max.toLocaleString()}${sub ? ' · ' + sub : ''}</span></div>`;
+    }
+    function renderBaseOps(telemetry) {
+      const box = document.getElementById('baseOps');
+      if (!box) return;
+      const base = telemetry && telemetry.base;
+      if (!base) { box.classList.add('offline'); document.getElementById('baseOpsStatus').textContent = 'เกมออฟไลน์ — เปิดเกมเพื่อดูสถานะสด'; return; }
+      box.classList.remove('offline');
+      document.getElementById('baseOpsStatus').innerHTML = `<span style="color:var(--emerald);">● สด</span> · รถลากที่กำลังทำงาน ${base.towTrucks} คัน · ศพทหาร ${base.corpses}`;
+      const st = base.structures, rows = [['เศษเหล็ก (Scrap)', (telemetry.scrap || 0).toLocaleString()], ['สิ่งปลูกสร้างทั้งหมด', `${st.total} / ${st.max}`]];
+      for (const [id, n] of Object.entries(st.counts)) rows.push(['· ' + (BUILD_NAMES[id] || id), n]);
+      document.getElementById('baseOpsStructs').innerHTML = rows.map(([a, b]) => `<span>${escHtml(a)}</span><span>${escHtml(b)}</span>`).join('');
+      document.getElementById('baseOpsTanks').innerHTML = base.tanks.map((t, i) =>
+        vehRow(Object.assign({}, t, { name: `${t.name} #${i + 1}` }), t.tow ? TOW_PHASE[t.tow] : '')).join('') || '<div class="veh-sub">ไม่มีข้อมูล</div>';
+      document.getElementById('baseOpsBtrs').innerHTML = base.btrs.map(b => {
+        let sub = b.state === 'ok' ? (PATROL_STATE[b.patrol] || b.patrol) : (b.tow ? TOW_PHASE[b.tow] : '');
+        if (b.state === 'ok' && b.patrol === 'garage') sub += ` · ออกครั้งต่อไปใน ${b.nextIn} วิ`;
+        if (b.patrol === 'out' || b.patrol === 'stop') sub += ` · ทหาร ${b.squad}/3`;
+        if (b.cargo) sub += ` · ของในรถ: ${b.cargo.scrap} เศษเหล็ก, ${b.cargo.gold}G, ${b.cargo.items} ชิ้น`;
+        return vehRow(b, sub);
+      }).join('') + (base.qrf || []).map(q => vehRow(Object.assign({}, q, { name: 'QRF BTR-80 CHARLIE' }), `${QRF_MISSION[q.mission] || q.mission} → ${q.target} · ทหาร ${q.squad}/4`)).join('')
+        + `<div class="veh-sub" style="margin-top:6px;">หน่วยกำลังเสริม (QRF): ${(base.qrf || []).length ? 'ออกปฏิบัติการอยู่' : base.qrfReadyIn > 0 ? `กำลังเตรียมพร้อม อีก ${base.qrfReadyIn} วิ` : 'พร้อมออกปฏิบัติการ (กด F ในเกม หรือปุ่มด้านล่าง)'}</div>`;
+    }
+
+    // ==================== CHEATS & MODS ====================
+    function cheatAddScrap(amount) {
+      if (!currentSave) createFreshSave();
+      currentSave.scrap = (currentSave.scrap || 0) + amount;
+      saveSaveData();
+      showToast(`+${amount.toLocaleString()} เศษเหล็กเข้าสู่ตัวละครเรียบร้อย!`, 'success');
+    }
+    function cheatAddGold(amount) {
+      if (!currentSave) createFreshSave();
+      currentSave.gold = (currentSave.gold || 0) + amount;
+      saveSaveData();
+      sendGameCmd('CMD_ADD_GOLD', { amount });
+      showToast(`+${amount.toLocaleString()} Gold เข้าสู่ตัวละครเรียบร้อย!`, 'success');
+      logEvent('CHEAT', `เพิ่มเงิน +${amount} Gold`);
+    }
+
+    function cheatAddSP(amount) {
+      if (!currentSave) createFreshSave();
+      currentSave.sp = (currentSave.sp || 0) + amount;
+      saveSaveData();
+      sendGameCmd('CMD_SYNC_SAVE');
+      showToast(`+${amount} Skill Points เรียบร้อย!`, 'success');
+      logEvent('CHEAT', `เพิ่มแต้มสกิล +${amount} SP`);
+    }
+
+    function cheatFullHeal() {
+      if (!currentSave) createFreshSave();
+      currentSave.hp = 999;
+      currentSave.mp = 500;
+      currentSave.potions = 99;
+      saveSaveData();
+      sendGameCmd('CMD_HEAL');
+      showToast('ฟื้นฟูเลือดและยาเต็มอัตรา 99 ชิ้นแล้ว!', 'success');
+      logEvent('CHEAT', 'ฟื้นฟู HP/MP และเติมยาเต็ม 99');
+    }
+
+    function cheatGoldenAK() {
+      if (!currentSave) createFreshSave();
+      currentSave.weapon = { name: 'Legendary AK-47 Golden', plus: 9 };
+      currentSave.akFound = true;
+      saveSaveData();
+      sendGameCmd('CMD_EQUIP_WEAPON', { weapon: currentSave.weapon });
+      showToast('เสกปืนลับในตำนาน AK-47 Golden (+9) เรียบร้อย!', 'success');
+      logEvent('CHEAT', 'เสกอาวุธระดับตำนาน Legendary AK-47 Golden (+9)');
+    }
+
+    function cheatMaxStats() {
+      if (!currentSave) createFreshSave();
+      currentSave.lvl = 50;
+      currentSave.xp = 999999;
+      currentSave.gold = 500000;
+      currentSave.sp = 50;
+      currentSave.hp = 999;
+      currentSave.mp = 500;
+      currentSave.potions = 99;
+      currentSave.weapon = { name: 'Omega Rotary Minigun', plus: 9 };
+      currentSave.title = 'Supreme Vanguard';
+      saveSaveData();
+      sendGameCmd('CMD_SYNC_SAVE');
+      showToast('⚡ เปิดใช้งาน Max God Stats: เลเวล 50, เงิน 500k, สกิล 50 SP สำเร็จ!', 'success');
+      logEvent('CHEAT', 'เปิดใช้งานสถานะสูงสุด Max God Stats (Lv.50)');
+    }
+
+    function cheatUnlockAllAchievements() {
+      if (!currentSave) createFreshSave();
+      currentSave.achieve = {
+        first_blood: 1, boss_hunter: 1, weapon_master: 1, rift_walker: 1,
+        wave_survivor: 1, tank_commander: 1, wealthy: 1, medic: 1
+      };
+      saveSaveData();
+      showToast('ปลดล็อกเหรียญตราและความสำเร็จทั้งหมดแล้ว!', 'success');
+      logEvent('CHEAT', 'ปลดล็อกเหรียญตราความสำเร็จครบทุกรายการ');
+    }
+
+    // ==================== SETTINGS OPERATIONS ====================
+    function loadSettingsData() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        currentSettings = raw ? JSON.parse(raw) : { bgm: 50, sfx: 70, lang: 'th', shake: true, dmgNum: true, diff: 'normal' };
+      } catch (e) {
+        currentSettings = { bgm: 50, sfx: 70, lang: 'th', shake: true, dmgNum: true, diff: 'normal' };
+      }
+
+      document.getElementById('setBGM').value = currentSettings.bgm ?? 50;
+      document.getElementById('bgmDisplay').textContent = (currentSettings.bgm ?? 50) + '%';
+      document.getElementById('setSFX').value = currentSettings.sfx ?? 70;
+      document.getElementById('sfxDisplay').textContent = (currentSettings.sfx ?? 70) + '%';
+      document.getElementById('setLang').value = currentSettings.lang || 'th';
+      document.getElementById('setDifficulty').value = currentSettings.diff || 'normal';
+      document.getElementById('setShake').checked = currentSettings.shake !== false;
+      document.getElementById('setDmgNumbers').checked = currentSettings.dmgNum !== false;
+    }
+
+    function saveSettingsData() {
+      currentSettings = {
+        bgm: parseInt(document.getElementById('setBGM').value, 10),
+        sfx: parseInt(document.getElementById('setSFX').value, 10),
+        lang: document.getElementById('setLang').value,
+        diff: document.getElementById('setDifficulty').value,
+        shake: document.getElementById('setShake').checked,
+        dmgNum: document.getElementById('setDmgNumbers').checked,
+        invasionInterval: parseInt(document.getElementById('setInvasionInterval').value, 10),
+        tankMultiplier: parseFloat(document.getElementById('setTankPower').value)
+      };
+
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentSettings));
+        showToast('บันทึกการตั้งค่าระบบและสมดุลเกมแล้ว!', 'success');
+        logEvent('SETTINGS', 'อัปเดตการตั้งค่าระบบและสมดุลยุทธวิธี');
+      } catch (e) {
+        showToast('ไม่สามารถบันทึกการตั้งค่าได้', 'error');
+      }
+    }
+
+    // ==================== SNAPSHOT SLOTS ====================
+    function saveToSlot(slotNum) {
+      if (!currentSave) {
+        showToast('ไม่มีข้อมูลเซฟที่จะบันทึก', 'error');
+        return;
+      }
+      const data = {
+        save: currentSave,
+        timestamp: new Date().toLocaleString('th-TH'),
+        summary: `${currentSave.cls.toUpperCase()} Lv.${currentSave.lvl} (${(currentSave.gold || 0).toLocaleString()}G)`
+      };
+      localStorage.setItem(SNAPSHOT_PREFIX + slotNum, JSON.stringify(data));
+      showToast(`บันทึก Snapshot ลง Slot ${slotNum} แล้ว!`, 'success');
+      logEvent('SLOT', `บันทึก Snapshot ลง Slot ${slotNum}: ${data.summary}`);
+      renderSlots();
+    }
+
+    function loadFromSlot(slotNum) {
+      const raw = localStorage.getItem(SNAPSHOT_PREFIX + slotNum);
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        currentSave = data.save;
+        localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
+        showToast(`กู้คืน Snapshot จาก Slot ${slotNum} สำเร็จ!`, 'success');
+        logEvent('SLOT', `กู้คืน Snapshot จาก Slot ${slotNum}`);
+        updateDashboardUI();
+      } catch (e) {
+        showToast('ไฟล์ใน Slot เสียหาย', 'error');
+      }
+    }
+
+    function renderSlots() {
+      for (let i = 1; i <= 3; i++) {
+        const raw = localStorage.getItem(SNAPSHOT_PREFIX + i);
+        const card = document.getElementById(`slotCard${i}`);
+        const statusEl = document.getElementById(`slot${i}Status`);
+        const bodyEl = document.getElementById(`slot${i}Body`);
+        const btnLoad = document.getElementById(`btnLoadSlot${i}`);
+
+        if (raw) {
+          try {
+            const data = JSON.parse(raw);
+            card.classList.add('filled');
+            statusEl.textContent = 'มีข้อมูล';
+            statusEl.style.color = 'var(--emerald)';
+            bodyEl.innerHTML = `<div><b>${data.summary}</b></div><div style="font-size:11px; color:var(--text-dim); margin-top:4px;">🕒 ${data.timestamp}</div>`;
+            btnLoad.disabled = false;
+          } catch (e) {
+            statusEl.textContent = 'เสียหาย';
+            btnLoad.disabled = true;
+          }
+        } else {
+          card.classList.remove('filled');
+          statusEl.textContent = 'ว่าง';
+          statusEl.style.color = 'var(--text-dim)';
+          bodyEl.textContent = 'ไม่มีข้อมูลที่บันทึกไว้';
+          btnLoad.disabled = true;
+        }
+      }
+    }
+
+    // ==================== EXPORT & IMPORT ====================
+    function exportSaveFile() {
+      if (!currentSave) {
+        showToast('ไม่มีข้อมูลเซฟที่จะส่งออก', 'error');
+        return;
+      }
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(currentSave, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const filename = `biohazard_save_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', filename);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast(`ส่งออกไฟล์เซฟ ${filename} เรียบร้อย!`, 'success');
+      logEvent('BACKUP', `ส่งออกไฟล์เซฟ: ${filename}`);
+    }
+
+    function handleFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && (parsed.lvl || parsed.cls)) {
+            currentSave = parsed;
+            localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
+            showToast('นำเข้าข้อมูลเซฟจากไฟล์สำเร็จแล้ว!', 'success');
+            logEvent('BACKUP', `นำเข้าข้อมูลเซฟจากไฟล์: ${file.name}`);
+            updateDashboardUI();
+          } else {
+            showToast('โครงสร้างไฟล์เซฟไม่ถูกต้อง', 'error');
+          }
+        } catch (err) {
+          showToast('ไม่สามารถอ่านไฟล์ JSON ได้', 'error');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function confirmWipeSave() {
+      if (confirm('คำเตือน: คุณต้องการลบข้อมูลเซฟทั้งหมดและเริ่มต้นเกมใหม่ใช่หรือไม่? (การกระทำนี้ไม่สามารถย้อนกลับได้)')) {
+        localStorage.removeItem(SAVE_KEY);
+        currentSave = null;
+        updateDashboardUI();
+        showToast('ล้างข้อมูลเซฟเรียบร้อยแล้ว', 'info');
+        logEvent('DANGER', 'ลบและรีเซ็ตข้อมูลเซฟทั้งหมด');
+      }
+    }
+
+    // ==================== CUSTOM GAMES ====================
+    function loadCustomGames() {
+      try {
+        const raw = localStorage.getItem(CUSTOM_GAMES_KEY);
+        customGames = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        customGames = [];
+      }
+      renderCustomGames();
+      document.getElementById('kpiTotalGames').textContent = 3 + customGames.length;
+      document.getElementById('gameCountTag').textContent = 3 + customGames.length;
+    }
+
+    function renderCustomGames() {
+      // Remove previously appended custom cards
+      document.querySelectorAll('.game-card.custom-game-card').forEach(c => c.remove());
+      const grid = document.getElementById('gamesGrid');
+
+      customGames.forEach((game, idx) => {
+        const card = document.createElement('div');
+        card.className = 'game-card custom-game-card';
+        card.innerHTML = `
+          <div class="game-cover" style="background: radial-gradient(circle, #2a1b38 0%, #0c0e18 100%);">
+            <div style="font-size: 48px;">${game.icon || '🎮'}</div>
+            <span class="game-cover-badge">${game.category || 'Custom'}</span>
+          </div>
+          <div class="game-body">
+            <h3>${game.title}</h3>
+            <div class="game-meta">
+              <span class="game-tag">${game.category || 'Game'}</span>
+              <span class="game-tag" style="color:var(--cyan);">Custom</span>
+            </div>
+            <p class="game-desc">${game.desc || 'เกมที่ผู้ใช้เพิ่มเข้ามาในคลัง'}</p>
+            <div class="game-footer">
+              <button class="btn btn-primary btn-sm" onclick="openGameModal('${game.url}', '${game.title}')">
+                เล่นในนี้
+              </button>
+              <a href="${game.url}" target="_blank" class="btn btn-outline btn-sm">แท็บใหม่</a>
+              <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteCustomGame(${idx})">ลบ</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openAddGameDialog() {
+      document.getElementById('addGameDialog').classList.add('open');
+    }
+    function closeAddGameDialog() {
+      document.getElementById('addGameDialog').classList.remove('open');
+    }
+
+    function submitAddGame() {
+      const title = document.getElementById('newGameTitle').value.trim();
+      const url = document.getElementById('newGameURL').value.trim();
+      const category = document.getElementById('newGameCategory').value;
+      const icon = document.getElementById('newGameIcon').value.trim() || '🎮';
+      const desc = document.getElementById('newGameDesc').value.trim();
+
+      if (!title || !url) {
+        showToast('กรุณากรอกชื่อเกมและที่อยู่ไฟล์ / URL', 'error');
+        return;
+      }
+
+      customGames.push({ title, url, category, icon, desc });
+      localStorage.setItem(CUSTOM_GAMES_KEY, JSON.stringify(customGames));
+      showToast(`เพิ่มเกม ${title} เข้าสู่คลังเรียบร้อย!`, 'success');
+      logEvent('GAMES', `เพิ่มเกมใหม่: ${title} (${url})`);
+      closeAddGameDialog();
+      loadCustomGames();
+    }
+
+    function deleteCustomGame(index) {
+      if (confirm(`คุณต้องการลบเกม ${customGames[index].title} ใช่หรือไม่?`)) {
+        const removed = customGames.splice(index, 1);
+        localStorage.setItem(CUSTOM_GAMES_KEY, JSON.stringify(customGames));
+        showToast(`ลบเกม ${removed[0].title} เรียบร้อยแล้ว`, 'info');
+        logEvent('GAMES', `ลบเกม ${removed[0].title}`);
+        loadCustomGames();
+      }
+    }
+
+    // ==================== INTERACTIVE GAME MODAL ====================
+    let currentModalURL = '';
+
+    function openGameModal(url, title) {
+      currentModalURL = url;
+      document.getElementById('modalGameTitle').textContent = title || 'Playing Game';
+      document.getElementById('modalGameFrame').src = url;
+      document.getElementById('gameModal').classList.add('open');
+      logEvent('PLAY', `เปิดเล่นเกม ${title} ใน Theater Modal`);
+    }
+
+    function closeGameModal() {
+      document.getElementById('gameModal').classList.remove('open');
+      document.getElementById('modalGameFrame').src = 'about:blank';
+      // Refresh save stats after playing
+      setTimeout(refreshAllData, 500);
+      logEvent('PLAY', 'ปิดหน้าต่างเล่นเกม');
+    }
+
+    function reloadModalFrame() {
+      const frame = document.getElementById('modalGameFrame');
+      frame.src = frame.src;
+      showToast('โหลดหน้าเกมใหม่แล้ว', 'info');
+    }
+
+    function popoutModalGame() {
+      if (currentModalURL) {
+        window.open(currentModalURL, '_blank');
+      }
+    }
+
+    function toggleModalFullscreen() {
+      const modal = document.querySelector('.modal-shell');
+      if (!document.fullscreenElement) {
+        modal.requestFullscreen().catch(err => alert(err.message));
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Close modal on Escape outside iframe
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('gameModal');
+        if (modal.classList.contains('open')) {
+          closeGameModal();
+        }
+      }
+    });
+
+    // Quick backup button in header
+    document.getElementById('btnQuickBackup').addEventListener('click', () => {
+      saveToSlot(1);
+    });
+
+    // Refresh all
+    function refreshAllData() {
+      loadSaveData();
+      loadSettingsData();
+      renderSlots();
+      loadCustomGames();
+      showToast('รีเฟรชข้อมูลล่าสุดทั้งหมดแล้ว', 'info');
+    }
+
+    // ==================== NEXUS GAME REAL-TIME BRIDGE ====================
+    let nexusBus = null;
+    let lastHeartbeatTime = 0;
+    let isGameOnline = false;
+
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        nexusBus = new BroadcastChannel('nexus_game_bus');
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel error', e);
+    }
+
+    // the invasion control panels (overview + tactical map): live status, buttons enabled only when they can work
+    function updateInvasionControl(r) {
+      const panels = document.querySelectorAll('.inv-ctl');
+      let txt = 'เปิดเกม OPERATION: BIOHAZARD เพื่อสั่งการ', raiding = false, canStart = false;
+      if (r) {
+        raiding = r.state !== 'idle';
+        canStart = !raiding && r.inWorld;
+        if (r.state === 'warn') txt = `🚨 ไซเรนดัง! ซอมบี้จะบุกใน ${r.warnIn} วินาที · ทหารประจำแนว ${r.soldiers} นาย`;
+        else if (r.state === 'wave') txt = `🚨 กำลังถูกบุก: ระลอก ${r.wave}/${r.maxWave} · เหลือ ${r.left} ตัว · บอส ${r.bosses} ตัว · ทหารประจำแนว ${r.soldiers} นาย`;
+        else if (!r.inWorld) txt = 'ผู้เล่นไม่ได้อยู่ในโลกหลัก: สั่งบุกไม่ได้ตอนนี้';
+        else txt = `ฐานปลอดภัย · การบุกครั้งต่อไปในอีก ${r.nextIn != null ? Math.floor(r.nextIn / 60) + ':' + String(r.nextIn % 60).padStart(2, '0') + ' นาที' : '-'}`;
+      }
+      panels.forEach(pn => {
+        pn.classList.toggle('raiding', raiding);
+        const st = pn.querySelector('[data-inv-status]'); if (st) st.textContent = txt;
+        pn.querySelectorAll('[data-inv-start]').forEach(b => b.disabled = !canStart);
+        pn.querySelectorAll('[data-inv-stop]').forEach(b => b.disabled = !raiding);
+      });
+    }
+
+    function sendGameCmd(type, payload = {}) {
+      const packet = {
+        source: 'NEXUS_DASHBOARD',
+        type,
+        timestamp: Date.now(),
+        payload
+      };
+
+      // 1. BroadcastChannel (ส่งข้ามแท็บและหน้าต่าง)
+      if (nexusBus) {
+        try { nexusBus.postMessage(packet); } catch (e) {}
+      }
+
+      // 2. Iframe modal (กรณีเล่นใน Dashboard)
+      const frame = document.getElementById('modalGameFrame');
+      if (frame && frame.contentWindow) {
+        try { frame.contentWindow.postMessage(packet, '*'); } catch (e) {}
+      }
+
+      logEvent('REMOTE', `ส่งคำสั่งเข้าเกม: ${type}`);
+    }
+
+    function handleIncomingGamePacket(data) {
+      if (!data || data.source !== 'BIOHAZARD_GAME') return;
+
+      if (data.type === 'HEARTBEAT') {
+        lastHeartbeatTime = Date.now();
+        setGameOnlineUI(data.payload);
+        renderBaseOps(data.payload);
+        updateTacMap(data.payload);
+      } else if (data.type === 'SAVE_OCCURRED') {
+        logEvent('SYNC', 'ตัวเกมทำการ Auto-Save — อัปเดตข้อมูลบน Dashboard ทันที');
+        loadSaveData();
+      } else if (data.type === 'GAME_READY') {
+        lastHeartbeatTime = Date.now();
+        showToast('🎮 ตรวจพบการเชื่อมต่อกับเกม OPERATION: BIOHAZARD แล้ว!', 'success');
+        logEvent('CONNECT', 'เชื่อมต่อกับเกมแบบ Real-time สำเร็จ');
+        sendGameCmd('CMD_REQUEST_STATUS');
+      } else if (data.type === 'WORLD_MAP') {
+        onWorldMap(data.payload);
+      } else if (data.type === 'GAME_OFFLINE') {
+        setGameOfflineUI();
+      }
+    }
+
+    if (nexusBus) {
+      nexusBus.onmessage = (event) => handleIncomingGamePacket(event.data);
+    }
+    window.addEventListener('message', (event) => handleIncomingGamePacket(event.data));
+
+    // Storage Event Listener (ซิงค์อัตโนมัติเมื่อเกมเซฟลง LocalStorage)
+    window.addEventListener('storage', (e) => {
+      if (e.key === SAVE_KEY) {
+        logEvent('STORAGE', 'ตรวจพบข้อมูลเซฟอัปเดตจากเกมภายนอก');
+        loadSaveData();
+      } else if (e.key === SETTINGS_KEY) {
+        loadSettingsData();
+      }
+    });
+
+    function setGameOnlineUI(telemetry) {
+      isGameOnline = true;
+      const dot = document.getElementById('liveGameDot');
+      const text = document.getElementById('liveGameText');
+      const panel = document.getElementById('liveBridgePanel');
+      const badgeStatus = document.getElementById('liveBadgeStatus');
+      const badgeDot = document.getElementById('liveBadgeDot');
+      const badgeLabel = document.getElementById('liveBadgeLabel');
+
+      if (dot) {
+        dot.style.background = 'var(--emerald)';
+        dot.style.boxShadow = '0 0 10px var(--emerald)';
+      }
+      if (text) {
+        text.innerHTML = `<span style="color:var(--emerald); font-weight:bold;">🟢 ออนไลน์:</span> ${telemetry.zone || 'Outpost'} (HP ${telemetry.hp}/${telemetry.maxHp})`;
+      }
+      if (panel) panel.classList.add('connected');
+      if (badgeStatus) badgeStatus.className = 'live-badge online';
+      if (badgeDot) {
+        badgeDot.style.background = 'var(--emerald)';
+        badgeDot.style.boxShadow = '0 0 8px var(--emerald)';
+      }
+      if (badgeLabel) {
+        badgeLabel.textContent = `เชื่อมต่อสด: ${telemetry.zone || 'สนามรบ'}`;
+      }
+
+      // Telemetry Cards
+      const curHp = typeof telemetry.hp === 'number' ? telemetry.hp : 100;
+      const curMaxHp = typeof telemetry.maxHp === 'number' ? telemetry.maxHp : 100;
+      const curMp = typeof telemetry.mp === 'number' ? telemetry.mp : 50;
+      const curMaxMp = typeof telemetry.maxMp === 'number' ? telemetry.maxMp : 50;
+      const curAmmo = typeof telemetry.ammo === 'number' ? telemetry.ammo : 30;
+      const curMaxAmmo = typeof telemetry.maxAmmo === 'number' ? telemetry.maxAmmo : 30;
+
+      const hpPct = Math.max(0, Math.min(100, (curHp / curMaxHp) * 100));
+      const mpPct = Math.max(0, Math.min(100, (curMp / curMaxMp) * 100));
+      const ammoPct = Math.max(0, Math.min(100, (curAmmo / curMaxAmmo) * 100));
+
+      const hpValEl = document.getElementById('teleHpVal');
+      const hpBarEl = document.getElementById('teleHpBar');
+      const hpTextEl = document.getElementById('teleHpText');
+      if (hpValEl) hpValEl.textContent = `${curHp} / ${curMaxHp}`;
+      if (hpTextEl) hpTextEl.textContent = `${hpPct.toFixed(0)}%`;
+      if (hpBarEl) {
+        hpBarEl.style.width = hpPct + '%';
+        hpBarEl.style.background = hpPct > 50 ? 'var(--emerald)' : hpPct > 25 ? 'var(--amber)' : 'var(--crimson)';
+      }
+
+      const mpValEl = document.getElementById('teleMpVal');
+      const mpBarEl = document.getElementById('teleMpBar');
+      const mpTextEl = document.getElementById('teleMpText');
+      if (mpValEl) mpValEl.textContent = `${curMp} / ${curMaxMp}`;
+      if (mpTextEl) mpTextEl.textContent = `${mpPct.toFixed(0)}%`;
+      if (mpBarEl) mpBarEl.style.width = mpPct + '%';
+
+      const ammoValEl = document.getElementById('teleAmmoVal');
+      const ammoBarEl = document.getElementById('teleAmmoBar');
+      const ammoTypeEl = document.getElementById('teleAmmoType');
+      if (ammoValEl) ammoValEl.textContent = `${curAmmo} / ${curMaxAmmo}`;
+      if (ammoTypeEl) ammoTypeEl.textContent = telemetry.weapon ? telemetry.weapon.name : 'AMMO';
+      if (ammoBarEl) ammoBarEl.style.width = ammoPct + '%';
+
+      const coordsEl = document.getElementById('teleCoords');
+      const zoneEl = document.getElementById('teleZone');
+      if (coordsEl) coordsEl.textContent = `X: ${telemetry.x ?? '-'}, Y: ${telemetry.y ?? '-'}`;
+      if (zoneEl) zoneEl.textContent = telemetry.zone || 'Outpost Alpha';
+
+      updateInvasionControl(telemetry.raid);
+      const invasionMsgEl = document.getElementById('teleInvasionMsg');
+      if (invasionMsgEl) {
+        if (telemetry.invasion && telemetry.invasion.active) {
+          invasionMsgEl.innerHTML = `<span style="color:var(--crimson); font-weight:bold;">🚨 ถูกบุก: Wave ${telemetry.invasion.wave}/${telemetry.invasion.maxWave} (เหลือ ${telemetry.invasion.left} ตัว)</span>`;
+        } else {
+          invasionMsgEl.textContent = `สถานะฐาน: ปลอดภัย · เวฟสูงสุด: ${telemetry.bestWave || 0}`;
+        }
+      }
+
+      // God Mode Button styling
+      const btnGod = document.getElementById('btnLiveGodMode');
+      if (btnGod) {
+        if (telemetry.godMode) {
+          btnGod.style.background = 'rgba(255, 42, 95, 0.25)';
+          btnGod.style.borderColor = 'var(--crimson)';
+          btnGod.style.color = '#fff';
+          btnGod.textContent = '🛡️ โหมดอมตะ: [เปิดอยู่]';
+        } else {
+          btnGod.style.background = 'transparent';
+          btnGod.style.borderColor = 'var(--border-accent)';
+          btnGod.style.color = 'var(--text-main)';
+          btnGod.textContent = '🛡️ สลับโหมดอมตะ (God Mode)';
+        }
+      }
+    }
+
+    function setGameOfflineUI() {
+      isGameOnline = false;
+      renderBaseOps(null);
+      const dot = document.getElementById('liveGameDot');
+      const text = document.getElementById('liveGameText');
+      const panel = document.getElementById('liveBridgePanel');
+      const badgeStatus = document.getElementById('liveBadgeStatus');
+      const badgeDot = document.getElementById('liveBadgeDot');
+      const badgeLabel = document.getElementById('liveBadgeLabel');
+
+      if (dot) {
+        dot.style.background = '#5c6280';
+        dot.style.boxShadow = 'none';
+      }
+      if (text) {
+        text.textContent = 'เกม: ออฟไลน์ (รอเปิดเกม)';
+      }
+      if (panel) panel.classList.remove('connected');
+      if (badgeStatus) badgeStatus.className = 'live-badge offline';
+      if (badgeDot) {
+        badgeDot.style.background = '#5c6280';
+        badgeDot.style.boxShadow = 'none';
+      }
+      if (badgeLabel) badgeLabel.textContent = 'รอเปิดเกม (STANDBY)';
+
+      const zoneEl = document.getElementById('teleZone');
+      if (zoneEl) zoneEl.textContent = 'รอการเชื่อมต่อ';
+      const invasionMsgEl = document.getElementById('teleInvasionMsg');
+      if (invasionMsgEl) invasionMsgEl.textContent = 'สถานะฐาน: ปกติ';
+    }
+
+    // Watchdog checking every 2 seconds if heartbeat stopped
+    setInterval(() => {
+      if (isGameOnline && Date.now() - lastHeartbeatTime > 3500) {
+        setGameOfflineUI();
+        logEvent('SYSTEM', 'เซสชันของเกมออฟไลน์หรือถูกปิดลง');
+      }
+    }, 2000);
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      checkAdminAuth();
+      populateWeaponSelect();
+      loadSaveData();
+      loadSettingsData();
+      renderArmory();
+      renderSlots();
+      loadCustomGames();
+      logEvent('SYSTEM', 'โหลดฐานข้อมูลเกม สรรพาวุธ 22 รุ่น และการตั้งค่าเรียบร้อย');
+    });
+
+    // Check immediately on load to prevent any content flash
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', checkAdminAuth);
+    } else {
+      checkAdminAuth();
+    }
+  </script>
+</body>
+</html>

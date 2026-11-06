@@ -4,8 +4,12 @@
     {
       "name": "game",
       "runtimeExecutable": "python",
-      "runtimeArgs": [".claude/serve.py", "8123"],
-      "port": 8123
+      "runtimeArgs": [
+        ".claude/serve.py",
+        "8123"
+      ],
+      "port": 8123,
+      "autoPort": false
     }
   ]
 }

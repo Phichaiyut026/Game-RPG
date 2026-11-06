@@ -1,5 +1,6 @@
-// Auto-exports every character, NPC, companion pet, monster, and boss in Ironvale
-// directly from js/graphics.js, js/data.js, and maps/*.js into models/<category>/*.png
+// Auto-exports every character, NPC, companion pet, monster, boss and gun in the game
+// directly from js/graphics.js, js/guns.js, js/data.js, js/bots.js and maps/*.js into
+// models/<category>/*.png, and rebuilds the gallery page models/index.html to match.
 // Run anytime with: node models/export_models.js
 
 const fs = require('fs');
@@ -131,6 +132,21 @@ function scaleSprite(spr, scale = 8) {
   return out;
 }
 
+// trim fully transparent margins (gun models sit in a square canvas with empty space below)
+function cropSprite(spr) {
+  let x0 = spr._w, y0 = spr._h, x1 = -1, y1 = -1;
+  for (let y = 0; y < spr._h; y++) for (let x = 0; x < spr._w; x++) {
+    if (spr.data[(y * spr._w + x) * 4 + 3] > 0) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  }
+  if (x1 < 0) return spr;
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, out = createSoftCanvas(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const si = ((y + y0) * spr._w + x + x0) * 4, di = (y * w + x) * 4;
+    for (let k = 0; k < 4; k++) out.data[di + k] = spr.data[si + k];
+  }
+  return out;
+}
+
 function composeTurnaroundSheet(views, scale = 8) {
   const pad = 16, gap = 14;
   const scaled = views.map(v => scaleSprite(v.spr, scale));
@@ -173,16 +189,21 @@ const sandbox = {
 vm.createContext(sandbox);
 
 const mapFiles = fs.readdirSync(path.join(rootDir, 'maps')).filter(f => f.endsWith('.js')).map(f => path.join('maps', f));
-const scripts = ['js/graphics.js', 'js/audio.js', 'js/settings.js', 'js/lang-th.js', 'js/data.js', 'js/world.js', 'js/maps.js', ...mapFiles];
+const scripts = ['js/graphics.js', 'js/guns.js', 'js/audio.js', 'js/settings.js', 'js/lang-th.js', 'js/data.js', 'js/world.js', 'js/maps.js', ...mapFiles, 'js/bots.js'];
 const combined = scripts.map(f => fs.readFileSync(path.join(rootDir, f), 'utf8')).join('\n');
 vm.runInContext(combined, sandbox);
 
-const { HEROES, CLASSES, NPCS, PET_SPR, PETS, SPR, ETYPES } = vm.runInContext('({ HEROES, CLASSES, NPCS, PET_SPR, PETS, SPR, ETYPES })', sandbox);
+const { HEROES, CLASSES, NPCS, PET_SPR, PETS, SPR, ETYPES, GUN_MODELS, WEAPONS } =
+  vm.runInContext('({ HEROES, CLASSES, NPCS, PET_SPR, PETS, SPR, ETYPES, GUN_MODELS, WEAPONS })', sandbox);
 
 const MODELS = [];
 
-// 1. Heroes
+// 1. Heroes (old class ids like knight/mage/ranger are aliases that draw the same sprite: skip those)
+const heroSeen = [];
 for (const [id, h] of Object.entries(HEROES)) {
+  const px = h.down[0].data;
+  if (heroSeen.some(d => d.length === px.length && d.every((v, i) => v === px[i]))) continue;
+  heroSeen.push(px);
   const cName = CLASSES[id] ? CLASSES[id].name : id;
   MODELS.push({
     category: 'heroes',
@@ -252,18 +273,103 @@ for (const [id, frames] of Object.entries(SPR)) {
   });
 }
 
-for (const cat of ['heroes', 'npcs', 'pets', 'monsters', 'bosses']) {
-  fs.mkdirSync(path.join(outRoot, cat), { recursive: true });
+// 6. Guns (js/guns.js): held model facing right / left, plus the bag icon
+const WT_LABEL = { rifle: 'Assault Rifle', sniper: 'Sniper Rifle', heavy: 'Heavy Weapon' };
+const gunType = name => {
+  for (const wt of ['rifle', 'sniper', 'heavy']) {
+    const i = (WEAPONS[wt] || []).findIndex(([n]) => n === name);
+    if (i >= 0) return `${WT_LABEL[wt]} · Tier ${i + 1}`;
+  }
+  if (name.startsWith('Goliath ')) return 'Boss Crafted · Cryo Tier 5';
+  if (name.startsWith('Omega ')) return 'Boss Crafted · Omega Tier 5';
+  return 'Secret Weapon';
+};
+for (const [name, g] of Object.entries(GUN_MODELS)) {
+  const held = cropSprite(g.img);
+  MODELS.push({
+    category: 'weapons',
+    id: name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+    name: `${name} (${gunType(name)})`,
+    size: `${held._w - 2}x${held._h - 2} px`,
+    views: [
+      { key: 'right', label: 'Held (Right)', spr: held },
+      { key: 'left',  label: 'Held (Left)',  spr: flipH(held) },
+      { key: 'icon',  label: 'Bag Icon',     spr: g.icon },
+    ]
+  });
 }
 
+const CATEGORIES = [
+  ['heroes', 'Operatives (ตัวละคร)'], ['weapons', 'Guns (ปืน)'], ['npcs', 'NPCs'], ['pets', 'Companions (คู่หู)'],
+  ['monsters', 'Zombies (ซอมบี้)'], ['bosses', 'Bosses (บอส)'],
+];
+for (const [cat] of CATEGORIES) fs.mkdirSync(path.join(outRoot, cat), { recursive: true });
+
+let files = 0;
 for (const m of MODELS) {
   const scale = m.category === 'bosses' ? 5 : 8;
   const sheet = composeTurnaroundSheet(m.views, scale);
   fs.writeFileSync(path.join(outRoot, m.category, `${m.id}_all_angles.png`), encodePNG(sheet._w, sheet._h, sheet.data));
+  files++;
   for (const v of m.views) {
     const single = scaleSprite(v.spr, scale);
     fs.writeFileSync(path.join(outRoot, m.category, `${m.id}_${v.key}.png`), encodePNG(single._w, single._h, single.data));
+    files++;
   }
 }
 
-console.log(`Exported ${MODELS.length} models into ${outRoot}`);
+// Gallery page, rebuilt from the same list so it always matches the exported files
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const sections = CATEGORIES.map(([cat, title]) => {
+  const items = MODELS.filter(m => m.category === cat);
+  if (!items.length) return '';
+  const cards = items.map(m => `
+      <article class="card">
+        <h3>${esc(m.name)}</h3>
+        <div class="meta">ID: <code>${esc(m.id)}</code> · ${esc(m.size)} · <code>models/${cat}/${esc(m.id)}_*.png</code></div>
+        <img class="sheet" src="${cat}/${m.id}_all_angles.png" alt="${esc(m.name)} all angles">
+        <div class="views">${m.views.map(v => `
+          <figure><img src="${cat}/${m.id}_${v.key}.png" alt="${esc(v.label)}"><figcaption>${esc(v.label)}</figcaption></figure>`).join('')}
+        </div>
+      </article>`).join('');
+  return `
+    <section id="${cat}">
+      <h2>${esc(title)} <span>${items.length}</span></h2>${cards}
+    </section>`;
+}).join('');
+const nav = CATEGORIES.map(([cat, title]) => `<a href="#${cat}">${esc(title)}</a>`).join(' · ');
+const html = `<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Model Gallery</title>
+<style>
+  body{margin:0;background:#0b0b1a;color:#e8e0c8;font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
+  header{padding:20px 24px;border-bottom:2px solid #d8a848}
+  h1{margin:0 0 6px;color:#d8a848;font-size:22px} header p{margin:0;color:#9898b8;font-size:14px}
+  nav{margin-top:10px;font-size:14px} nav a{color:#9fd0ff}
+  section{padding:8px 24px 24px} h2{color:#9fd0ff;border-bottom:1px solid #2a2850;padding-bottom:6px}
+  h2 span{color:#9898b8;font-size:14px;font-weight:normal}
+  .card{background:#14132a;border:1px solid #2a2850;border-radius:6px;padding:14px;margin:12px 0}
+  .card h3{margin:0 0 4px;color:#f0e0b0;font-size:16px} .meta{color:#9898b8;font-size:12px;margin-bottom:10px}
+  code{color:#c0d8ff}
+  img{image-rendering:pixelated;max-width:100%}
+  .views{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+  figure{margin:0;background:#1e1c38;padding:8px;border-radius:4px;text-align:center}
+  figcaption{font-size:12px;color:#9898b8;margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Model Gallery</h1>
+  <p>${MODELS.length} models · generated by <code>node models/export_models.js</code> from the game source</p>
+  <nav>${nav}</nav>
+</header>${sections}
+</body>
+</html>
+`;
+fs.writeFileSync(path.join(outRoot, 'index.html'), html);
+
+console.log(`Exported ${MODELS.length} models (${files} PNG files) into ${outRoot}`);
+for (const [cat] of CATEGORIES) console.log(`  ${cat}: ${MODELS.filter(m => m.category === cat).length}`);

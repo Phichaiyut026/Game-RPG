@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Ironvale</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
+<title>OPERATION: BIOHAZARD - Zombie Outbreak Tactical Survival</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Press+Start+2P&family=Chakra+Petch:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,48 +13,61 @@
   <!-- all in-game text is drawn on this 3x layer so Thai and the pixel font both stay sharp -->
   <canvas id="ui" width="960" height="720"></canvas>
   <div id="help"><div class="card">
-    <h1>HOW TO PLAY</h1>
-    <h2>CONTROLS</h2>
+    <h1>OPERATION: BIOHAZARD</h1>
+    <h2>TACTICAL CONTROLS</h2>
     <div class="keys l-th">
-      <span><kbd>←↑↓→</kbd> <kbd>WASD</kbd></span><span>เดิน · <kbd>SHIFT</kbd> กลิ้งหลบ</span>
-      <span><kbd>SPACE</kbd> <kbd>J</kbd></span><span>โจมตี (กดค้างได้ · อัศวินฟันคอมโบ 3 จังหวะ) · ล็อกเป้าศัตรูอัตโนมัติ</span>
-      <span><kbd>K</kbd> <kbd>L</kbd></span><span>สกิล 1 (ปลดล็อก LV2) / สกิล 2 (ปลดล็อก LV5)</span>
-      <span><kbd>T</kbd></span><span>หน้าสกิล: อัปเลเวลสกิล และต้นไม้สกิล (<kbd>TAB</kbd> สลับหน้า)</span>
-      <span><kbd>E</kbd></span><span>คุยกับ NPC · ซื้อขาย · เปิดหีบสมบัติ</span>
-      <span><kbd>I</kbd> <kbd>Q</kbd> <kbd>C</kbd> <kbd>V</kbd></span><span>กระเป๋า · <kbd>Q</kbd> ยา HP · <kbd>C</kbd> ไอเทมด่วน · <kbd>V</kbd> สลับสัตว์เลี้ยงคู่หู</span>
-      <span><kbd>N</kbd> <kbd>B</kbd> <kbd>Y</kbd></span><span>แผนที่ใหญ่ · <kbd>B</kbd> สมุดภาพมอนสเตอร์ · <kbd>Y</kbd> ความสำเร็จและฉายาลับ (เพิ่มสเตตัส)</span>
-      <span><kbd>ESC</kbd> <kbd>O</kbd></span><span>ตั้งค่า: เพลง · เสียง · ภาษา · ความยาก</span>
-      <span><kbd>G</kbd></span><span>ออโต้ฟาร์ม: ตัวละครเดินหามอน ตี ใช้สกิล และกินยาเอง (กดปุ่มเดินเพื่อควบคุมเองได้ทันที)</span>
-      <span><kbd>H</kbd> <kbd>M</kbd></span><span>เปิดหน้านี้ · เปิด/ปิดเพลง</span>
+      <span><kbd>←↑↓→</kbd> <kbd>WASD</kbd></span><span>เคลื่อนที่สนามรบ · <kbd>SHIFT</kbd> กลิ้งหลบการโจมตี</span>
+      <span><kbd>SPACE</kbd> <kbd>J</kbd></span><span>ยิงอาวุธปืน (เล็งเป้า 360°)</span>
+      <span><kbd>R</kbd> <kbd>SHIFT</kbd></span><span><kbd>R</kbd> รีโหลดเปลี่ยนแม็กกาซีนกระสุน · <kbd>SHIFT</kbd> กลิ้งหลบยุทธวิธี</span>
+      <span><kbd>T</kbd></span><span>แผนผังฝึกฝนยุทธวิธีทางทหาร (Tactical Training Tree)</span>
+      <span><kbd>E</kbd></span><span>วิทยุสื่อสาร NPC · จัดซื้อสรรพาวุธ · เปิดกล่องเสบียง</span>
+      <span><kbd>I</kbd> <kbd>Q</kbd> <kbd>C</kbd> <kbd>V</kbd></span><span>กระเป๋าสนาม · <kbd>Q</kbd> ปฐมพยาบาล · <kbd>C</kbd> สติมแพ็ก · <kbd>V</kbd> สลับคู่หูรบ (K-9 / โดรน / ป้อมปืน)</span>
+      <span><kbd>N</kbd> <kbd>X</kbd> <kbd>Y</kbd></span><span>เรดาร์แผนที่ · <kbd>X</kbd> ข้อมูลซอมบี้กลายพันธุ์ · <kbd>Y</kbd> เหรียญตราเกียรติยศและยศทหาร</span>
+      <span><kbd>B</kbd></span><span>โหมดสร้างฐาน: กระสอบทราย ลวดหนาม กำแพง ป้อมปืน กับดัก คลังกระสุน สปอตไลท์ (ใช้เศษเหล็ก + เงิน)</span>
+      <span><kbd>ESC</kbd> <kbd>O</kbd></span><span>ตั้งค่า: วิทยุเพลง · เอฟเฟกต์เสียงปืน · ภาษา · ระดับความยาก</span>
+      <span><kbd>G</kbd></span><span>ระบบปฏิบัติการลาดตระเวนอัตโนมัติ (Auto Farm)</span>
+      <span><kbd>F</kbd></span><span>ส่งกำลังเสริม (QRF) ไปช่วยหน่วยลาดตระเวน BTR ที่กำลังลำบาก</span>
+      <span><kbd>F2</kbd></span><span>โหมดแอดมินผู้สังเกตการณ์: กล้องลอยมองจากมุมสูง ไม่ต้องบังคับตัวละคร · <kbd>TAB</kbd> ติดตามหน่วย · <kbd>1-5</kbd> กระโดดไปจุดสำคัญ · <kbd>SPACE</kbd> หยุดเวลา · <kbd>-</kbd>/<kbd>=</kbd> ความเร็ว</span>
+      <span><kbd>H</kbd> <kbd>M</kbd></span><span>เปิดคู่มือการรบ · เปิด/ปิดเสียงวิทยุ</span>
+      <span><kbd>U</kbd></span><span>ซ่อน/แสดง UI ทั้งหมด (ดูสนามรบแบบเต็มจอ) · เลื่อนลูกกลิ้งเมาส์เพื่อซูมเข้า/ออก</span>
     </div>
     <div class="keys l-en">
-      <span><kbd>←↑↓→</kbd> <kbd>WASD</kbd></span><span>Move · <kbd>SHIFT</kbd> Dodge roll</span>
-      <span><kbd>SPACE</kbd> <kbd>J</kbd></span><span>Attack (hold to repeat · 3-hit Knight combo) · Auto-aims at nearest foe</span>
-      <span><kbd>K</kbd> <kbd>L</kbd></span><span>Skill 1 (unlocks LV2) / Skill 2 (unlocks LV5)</span>
-      <span><kbd>T</kbd></span><span>Skills screen: level up skills and the skill tree (<kbd>TAB</kbd> switches page)</span>
-      <span><kbd>E</kbd></span><span>Talk to NPCs · Trade · Open chests</span>
-      <span><kbd>I</kbd> <kbd>Q</kbd> <kbd>C</kbd> <kbd>V</kbd></span><span>Bag · <kbd>Q</kbd> HP Potion · <kbd>C</kbd> Quick Use · <kbd>V</kbd> Cycle Companion Pet</span>
-      <span><kbd>N</kbd> <kbd>B</kbd> <kbd>Y</kbd></span><span>World map · <kbd>B</kbd> Bestiary · <kbd>Y</kbd> Achievements & Titles (Stat bonuses)</span>
-      <span><kbd>ESC</kbd> <kbd>O</kbd></span><span>Settings: music · sound · language · difficulty</span>
-      <span><kbd>G</kbd></span><span>Auto farm: walks to monsters, attacks, uses skills and potions (press a move key to take over)</span>
-      <span><kbd>H</kbd> <kbd>M</kbd></span><span>This page · Toggle music</span>
+      <span><kbd>←↑↓→</kbd> <kbd>WASD</kbd></span><span>Move Operative · <kbd>SHIFT</kbd> Combat Dodge Roll</span>
+      <span><kbd>SPACE</kbd> <kbd>J</kbd></span><span>Fire Firearms (360° Auto-Aim)</span>
+      <span><kbd>R</kbd> <kbd>SHIFT</kbd></span><span><kbd>R</kbd> Reload Magazine · <kbd>SHIFT</kbd> Combat Dodge Roll</span>
+      <span><kbd>T</kbd></span><span>Tactical Training Tree (Specialization Perks)</span>
+      <span><kbd>E</kbd></span><span>Interact with NPCs · Gunsmith · Open Crates</span>
+      <span><kbd>I</kbd> <kbd>Q</kbd> <kbd>C</kbd> <kbd>V</kbd></span><span>Field Bag · <kbd>Q</kbd> Medkit · <kbd>C</kbd> Stimpack · <kbd>V</kbd> Cycle Drone/K-9/Turret</span>
+      <span><kbd>N</kbd> <kbd>X</kbd> <kbd>Y</kbd></span><span>Tactical Radar · <kbd>X</kbd> Target Bestiary · <kbd>Y</kbd> Ranks & Medals</span>
+      <span><kbd>B</kbd></span><span>Base Construction: sandbags, wire, walls, turrets, traps, ammo cache, searchlight (costs Scrap + Gold)</span>
+      <span><kbd>ESC</kbd> <kbd>O</kbd></span><span>Settings: radio music · gunfire FX · language · difficulty</span>
+      <span><kbd>G</kbd></span><span>Tactical Auto-Farm Sweep</span>
+      <span><kbd>F</kbd></span><span>Send the QRF to reinforce a BTR patrol in trouble</span>
+      <span><kbd>F2</kbd></span><span>Admin Observer: free top-down camera, no character control · <kbd>TAB</kbd> follow units · <kbd>1-5</kbd> jump · <kbd>SPACE</kbd> pause · <kbd>-</kbd>/<kbd>=</kbd> speed</span>
+      <span><kbd>H</kbd> <kbd>M</kbd></span><span>Combat Manual · Toggle Radio</span>
+      <span><kbd>U</kbd></span><span>Hide / show the whole UI (clean battlefield view) · Mouse wheel zooms in / out</span>
     </div>
-    <h2>TIPS</h2>
+    <h2>MISSION BRIEFING</h2>
     <ul class="l-th">
-      <li>รับเควสจาก <b>Elder Brann</b> (เนื้อเรื่อง) และ <b>Mira</b> (ค่าหัว ทำซ้ำได้) ดูป้าย <b>!</b> / <b>?</b> บนหัว</li>
-      <li>ยิ่งไปทางตะวันออกมอนยิ่งเก่ง เก็บของมาขายพ่อค้า ซื้อยา และตีบวกอาวุธที่ทั่งของเขา</li>
-      <li>เลเวลอัปได้ 2 แต้มสกิล ใช้อัปเลเวลสกิล (สูงสุด Lv5) หรืออัปต้นไม้สกิลก็ได้</li>
-      <li><b>ดันเจี้ยน</b>: บันไดในซากปรักหักพัง ลงได้ 3 ชั้น มีบอส Lich King (แนะนำ LV 8+) · <b>ประตูวาร์ป</b>สีม่วงทางเหนือของทุ่งหญ้าไปช่องเขาหิมะ</li>
-      <li>ในหมู่บ้าน HP/MP ฟื้นเร็ว · ปรับความยากได้ในตั้งค่า · เกมเซฟอัตโนมัติ</li>
+      <li>รับภารกิจกวาดล้างซอมบี้จาก <b>Commander Vance</b> และล่าค่าหัวซอมบี้กลายพันธุ์จาก <b>Drill Sgt. Miller</b> ดูสัญลักษณ์ <b>!</b> / <b>?</b> บนหัว</li>
+      <li>ยิ่งเดินลึกไปทางทิศตะวันออก ซอมบี้จะยิ่งดุร้ายและกลายพันธุ์ นำชิ้นส่วนชีวภาพมาขาย <b>Quartermaster Higgins</b> และตีบวกปืนที่ทั่งสรรพาวุธ</li>
+      <li>เลเวลอัปได้รับ 2 แต้มทักษะ เพื่ออัปเกรดสกิลและแผนผังฝึกยุทธวิธีทางทหาร</li>
+      <li><b>แล็บใต้ดิน Bunker B3 & รอยแยกมิติ</b>: บันไดในซากเมืองนำลงสู่ Bunker B3 เพื่อต่อสู้กับบอส Nemesis Tyrant · แผ่นวาร์ปอเวจีเปิดทางสู่ดันเจี้ยนไร้ขีดจำกัด</li>
+      <li>ภายในฐานกักกัน Outpost Alpha เกราะและพลังงานจะฟื้นฟูอัตโนมัติรวดเร็ว</li>
     </ul>
     <ul class="l-en">
-      <li>Take quests from <b>Elder Brann</b> (story) and <b>Mira</b> (repeatable bounties). Look for <b>!</b> / <b>?</b> over their heads.</li>
-      <li>Monsters get tougher to the east. Sell loot to the merchant, buy potions and upgrade gear at his anvil.</li>
-      <li>Each level gives 2 skill points. Spend them on skill levels (max Lv5) or the skill tree.</li>
-      <li><b>Dungeon & Rifts</b>: stairs in the Old Ruins lead 3 floors down to the Lich King. Step on the swirling <b>Abyssal Rift</b> stone in the village for infinite depths!</li>
-      <li>HP/MP regenerate fast in the village · Difficulty is in Settings · The game saves automatically.</li>
+      <li>Receive quarantine sweep operations from <b>Commander Vance</b> and mutant zombie bounties from <b>Drill Sgt. Miller</b>. Look for <b>!</b> / <b>?</b> indicators.</li>
+      <li>Zombies mutate and grow stronger further east. Sell biohazard samples to <b>Quartermaster Higgins</b>, buy medkits, and customize firearms at his gunsmith anvil.</li>
+      <li>Each rank grants 2 specialization points to invest in combat skills or tactical training tree.</li>
+      <li><b>Bunker B3 & Rifts</b>: stairs at ruined city center lead down to Bunker B3 to neutralize the Nemesis Tyrant bio-weapon. Step onto the Abyssal Jump Pad for endless challenges!</li>
+      <li>Armor and energy recover rapidly inside Quarantine Outpost Alpha base perimeter.</li>
     </ul>
-    <button id="helpClose"><span class="l-th">เริ่มผจญภัย ▶ ENTER</span><span class="l-en">LET'S GO ▶ ENTER</span></button>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px;">
+      <button id="helpClose"><span class="l-th">เริ่มภารกิจ ▶ ENTER</span><span class="l-en">DEPLOY ▶ ENTER</span></button>
+      <a href="dashboard.html" style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px; background:rgba(0,240,255,0.1); border:1px solid #00f0ff; color:#00f0ff; border-radius:4px; text-decoration:none; font-size:13px; font-weight:bold;">
+        📊 <span class="l-th">เปิดแดชบอร์ดบริหารเกม (Dashboard)</span><span class="l-en">Open Game Ops Dashboard</span>
+      </a>
+    </div>
   </div></div>
 </div>
 <div id="touch">
@@ -63,12 +76,13 @@
     <button data-k="ArrowLeft">◀</button><button data-k="ArrowDown">▼</button><button data-k="ArrowRight">▶</button>
   </div>
   <div class="act">
-    <button data-k="KeyI">BAG</button><button data-k="KeyQ">POT</button><button data-k="KeyK">S1</button>
-    <button data-k="KeyE">B</button><button data-k="Space">A</button><button data-k="KeyL">S2</button>
+    <button data-k="KeyI">BAG</button><button data-k="KeyQ">MED</button><button data-k="KeyR">RLD</button>
+    <button data-k="KeyE">ACT</button><button data-k="Space">FIRE</button><button data-k="ShiftLeft">ROL</button>
     <button data-k="KeyT">SKILL</button><button data-k="KeyN">MAP</button><button data-k="Escape">⚙</button><button data-k="KeyG">AUTO</button>
   </div>
 </div>
 <script src="js/graphics.js"></script>
+<script src="js/guns.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/lang-th.js"></script>
@@ -78,8 +92,20 @@
 <!-- map packs: one file per area in maps/ -->
 <script src="maps/frostpeak.js"></script>
 <script src="maps/emberfall.js"></script>
+<script src="js/mountains.js"></script>
 <script src="js/gameplay.js"></script>
 <script src="js/bots.js"></script>
+<script src="js/tank.js"></script>
+<script src="js/artillery.js"></script>
+<script src="js/invasion.js"></script>
+<script src="js/recovery.js"></script>
+<script src="js/patrol.js"></script>
+<script src="js/airstrike.js"></script>
+<script src="js/raidforce.js"></script>
+<script src="js/medic.js"></script>
+<script src="js/spectator.js"></script>
+<script src="js/build.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/nexus-bridge.js"></script>
 </body>
 </html>

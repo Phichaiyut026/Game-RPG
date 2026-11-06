@@ -75,6 +75,7 @@ function equip(i) {
   if (it.kind === 'weapon' && !canWield(it)) { msg(`Only a ${WT_CLASS[it.wt || 'sword']} can use that.`, '#ff8080'); return sfx('no'); }
   p[it.kind] = it;
   if (old) p.inv[i] = old; else p.inv.splice(i, 1);
+  if (it.kind === 'weapon') { p.reloadT = 0; p.ammo = maxAmmo(p.weapon); }
   p.hp = Math.min(p.hp, maxHp()); p.mp = Math.min(p.mp, maxMp()); sfx('equip'); save();
 }
 function unequip(slotIdx) {
@@ -82,6 +83,7 @@ function unequip(slotIdx) {
   if (!it) return sfx('no');
   if (p.inv.length >= BAG) { msg('Bag is full! Cannot unequip.', '#ff8080'); return sfx('no'); }
   p[slot] = null; p.inv.push(it);
+  if (slot === 'weapon') { p.reloadT = 0; p.ammo = maxAmmo(p.weapon); }
   p.hp = Math.min(p.hp, maxHp()); p.mp = Math.min(p.mp, maxMp()); sfx('equip'); save();
 }
 function useBagItem(i) {
@@ -95,12 +97,12 @@ function useBagItem(i) {
   } else if (it.id === 'elixir') {
     p.elixirT = 1800; float(p.x + 6, p.y - 10, 'ELIXIR!', '#d080ff'); msg('Hero Elixir: ATK/CRIT/SPD up for 30s!', '#d080ff'); sfx('lvl');
   } else if (it.id === 'scroll') {
-    if (inWorld() && p.x < 26 * T) { msg('Already in Ironvale Village!', '#f8e090'); return sfx('no'); }
+    if (inWorld() && inBasePx(p.x, p.y)) { msg('Already in Ironvale Village!', '#f8e090'); return sfx('no'); }
     if (typeof rift !== 'undefined' && rift) exitRift();
     if (dungeon) exitDungeon();
     if (arena) leaveArena();
     if (region) leaveRegion();
-    p.x = 12 * T + 2; p.y = 24 * T + 2; zoneName = zoneAt(p.x); banner = { txt: zoneName, t: 150 };
+    p.x = (12 + OX) * T + 2; p.y = 24 * T + 2; zoneName = zoneAt(p.x); banner = { txt: zoneName, t: 150 };
     burst(p.x + 6, p.y + 6, '#f8e090', 20); msg('Teleported to Ironvale Village!', '#f8e090'); sfx('rare'); mode = 'play';
   }
   if (--it.count <= 0) p.inv.splice(i, 1);
@@ -114,7 +116,7 @@ function quickStack() {
 }
 function useQuickItem() {
   const s = quickStack();
-  if (!s) { msg('No consumables in bag!', '#a0a8e0'); return sfx('no'); }
+  if (!s) { msg('No consumables in bag!', '#b8b890'); return sfx('no'); }
   useBagItem(p.inv.indexOf(s));
 }
 function actBagSelection(sell) {
@@ -128,7 +130,7 @@ function actBagSelection(sell) {
   if (bagZone === 'eq') return unequip(eqCur);
   const it = p.inv[invCur];
   if (!it) return sfx('no');
-  if (it.kind === 'mat') { msg('Sell monster loot to the merchant in town.', '#a0a8e0'); sfx('no'); }
+  if (it.kind === 'mat') { msg('Sell monster loot to the merchant in town.', '#b8b890'); sfx('no'); }
   else if (it.kind === 'use') useBagItem(invCur);
   else equip(invCur);
 }
@@ -215,25 +217,6 @@ function settingsInput(code) {
 }
 
 // ---- Skill screen (T): SKILLS page (level up K/L skills) and TREE page ----
-let skillTab = 'skills', skillCur = 0;
-function skillCheck(i) {
-  const s = C().skills[i], lv = p.skillLv[i];
-  if (lv >= SKILL_MAX) return 'MAX LEVEL';
-  if (p.lvl < s.lvl) return `UNLOCKS AT LV ${s.lvl}`;
-  const need = skillReqLv(s, lv + 1);
-  if (p.lvl < need) return `NEEDS PLAYER LV ${need}`;
-  if (p.sp <= 0) return 'NO SKILL POINTS';
-  return null;
-}
-function skillsInput(code) {
-  if (['ArrowLeft', 'KeyA', 'ArrowRight', 'KeyD'].includes(code)) { skillCur ^= 1; sfx('menu'); }
-  else if (code === 'Enter' || code === 'Space' || code === 'KeyE') {
-    if (skillCheck(skillCur)) return sfx('no');
-    p.skillLv[skillCur]++; p.sp--; sfx('lvl'); save();
-    msg(`${C().skills[skillCur].name} reached LV ${p.skillLv[skillCur]}!`, '#f8c838');
-  } else if (code === 'Escape' || code === 'KeyT') mode = 'play';
-}
-
 let treeCol = 0, treeTier = 0;
 function treeCheck(n) {
   const r = rank(n.id);
@@ -244,8 +227,6 @@ function treeCheck(n) {
   return null;
 }
 function treeInput(code) {
-  if (code === 'Tab') { skillTab = skillTab === 'skills' ? 'tree' : 'skills'; sfx('menu'); return; }
-  if (skillTab === 'skills') return skillsInput(code);
   if (code === 'ArrowLeft' || code === 'KeyA') { treeCol = (treeCol + 2) % 3; sfx('menu'); }
   else if (code === 'ArrowRight' || code === 'KeyD') { treeCol = (treeCol + 1) % 3; sfx('menu'); }
   else if (code === 'ArrowUp' || code === 'KeyW') { treeTier = (treeTier + 2) % 3; sfx('menu'); }
@@ -313,14 +294,14 @@ function bestiaryInput(code) {
   const n = bestiaryKeys().length;
   const nav = { ArrowLeft:-1, KeyA:-1, ArrowRight:1, KeyD:1, ArrowUp:-5, KeyW:-5, ArrowDown:5, KeyS:5 }[code];
   if (nav) { bestCur = (bestCur + nav + n) % n; sfx('menu'); return; }
-  if (code === 'Escape' || code === 'KeyB' || code === 'Enter' || code === 'Space') { mode = 'play'; sfx('menu'); }
+  if (code === 'Escape' || code === 'KeyX' || code === 'Enter' || code === 'Space') { mode = 'play'; sfx('menu'); }
 }
 function actAchieveSelection() {
   const id = ACHIEVE_KEYS[achieveCur];
   if (p.achieve && p.achieve[id]) {
     if (p.title === id) {
       p.title = null;
-      msg('Unequipped title.', '#a0a8e0');
+      msg('Unequipped title.', '#b8b890');
       sfx('menu');
     } else {
       p.title = id;
@@ -347,6 +328,11 @@ function press(code) {
   switch (mode) {
     case 'title':
       if (code === 'KeyO' || code === 'Escape') openSettings('title');
+      else if (code === 'KeyV') {                          // straight into admin observer mode
+        if (saved) startGame(true);
+        else { startGame(false, 'assault'); dialogQ = []; dialogDone = null; mode = 'play'; }
+        toggleSpectator(true);
+      }
       else if ((code === 'Enter' || code === 'Space') && saved) startGame(true);
       else if (code === 'Enter' || code === 'Space' || (code === 'KeyN' && saved)) { mode = 'class'; sfx('menu'); }
       break;
@@ -376,11 +362,16 @@ function press(code) {
     case 'map': if (ok || code === 'Escape' || code === 'KeyN') mode = 'play'; break;
     case 'help': if (ok || code === 'Escape' || code === 'KeyH') closeHelp(); break;
     case 'play':
+      if (spec) { specInput(code); break; }                // admin observer takes every key (spectator.js)
+      if (code === 'F2' || code === 'Backquote') { toggleSpectator(true); break; }
+      if (buildInput(code)) break;                         // build mode takes the keys it uses (build.js)
       if (code === 'Space' || code === 'KeyJ') attack();
+      else if (code === 'KeyR') startReload();
       else if (code === 'ShiftLeft' || code === 'ShiftRight') dodgeRoll();
       else if (code === 'KeyE' || code === 'Enter') {
-        const n = nearNpc(), c = nearChest(), sh = nearShrine(), st = nearStash(), wl = nearWell(), rf = nearRiftPortal();
-        if (n && inWorld()) talk(n);
+        const n = nearNpc(), c = nearChest(), sh = nearShrine(), st = nearStash(), wl = nearWell(), rf = nearRiftPortal(), gt = nearGate();
+        if (gt) toggleGate(gt);                           // bridge gate: open / close
+        else if (n && inWorld()) talk(n);
         else if (c) openChest(c);
         else if (sh) useShrine(sh);
         else if (rf) enterRift(1);
@@ -392,13 +383,14 @@ function press(code) {
       else if (code === 'KeyC' || code === 'Digit3') useQuickItem();
       else if (code === 'KeyV') cyclePet();
       else if (code === 'KeyG') toggleAuto();
-      else if (code === 'KeyB') { mode = 'bestiary'; bestCur = 0; sfx('menu'); }
+      else if (code === 'KeyF') sendQRF();                 // send the QRF to the patrol in most trouble (patrol.js)
+      else if (code === 'KeyB') toggleBuild();
+      else if (code === 'KeyX') { mode = 'bestiary'; bestCur = 0; sfx('menu'); }
       else if (code === 'KeyY') { mode = 'achieve'; achieveCur = 0; sfx('menu'); }
-      else if (code === 'KeyT') { mode = 'tree'; skillTab = 'skills'; sfx('menu'); }
+      else if (code === 'KeyT') { mode = 'tree'; sfx('menu'); }
       else if (code === 'KeyN') { mode = 'map'; sfx('menu'); }
       else if (code === 'KeyH') openHelp();
-      else if (code === 'KeyK' || code === 'Digit1') useSkill(0);
-      else if (code === 'KeyL' || code === 'Digit2') useSkill(1);
+      else if (code === 'KeyU') toggleUI();
       else if (code === 'Escape' || code === 'KeyP' || code === 'KeyO') openSettings('play');
       break;
   }
@@ -410,7 +402,7 @@ addEventListener('keydown', e => {
   if (!e.repeat || (e.code.startsWith('Arrow') && ['bag', 'sell', 'shop', 'craft', 'stash', 'bestiary', 'settings', 'achieve'].includes(mode))) press(e.code);
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (mode === 'play') save(); });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (mode === 'play' && !spec) save(); });
 document.querySelectorAll('#touch button').forEach(b => {
   const k = b.dataset.k;
   b.addEventListener('pointerdown', e => { e.preventDefault(); keys[k] = true; initAudio(); press(k); });
@@ -464,10 +456,13 @@ cv.addEventListener('pointerdown', e => {
       }
     });
   } else if (mode === 'tree') {
-    if (my >= 10 && my <= 26 && mx >= 14 && mx < 128) { skillTab = mx < 71 ? 'skills' : 'tree'; sfx('menu'); return; }
-    if (skillTab === 'skills' && my >= 32 && my <= 182) {
-      const i = mx < 160 ? 0 : 1;
-      if (skillCur === i) skillsInput('Enter'); else { skillCur = i; sfx('menu'); }
+    for (let c = 0; c < 3; c++) for (let t = 0; t < 3; t++) {
+      const x = 16 + c * 98, y = 44 + t * 44;
+      if (mx >= x && mx <= x + 92 && my >= y && my <= y + 34) {
+        if (treeCol === c && treeTier === t) treeInput('Enter');
+        else { treeCol = c; treeTier = t; sfx('menu'); }
+        return;
+      }
     }
   } else if (mode === 'shop') {
     const opts = shopOpts();
@@ -525,21 +520,21 @@ cv.addEventListener('pointerdown', e => {
   } else if (mode === 'play') {
     const gx = (e.clientX - rect.left) / rect.width * VW, gy = (e.clientY - rect.top) / rect.height * VH;
     if (gx >= 4 && gx <= 162 && gy >= 4 && gy <= 48) { mode = 'achieve'; achieveCur = 0; sfx('menu'); return; }
+    if (gx >= 4 && gx <= 162 && gy >= 50 && gy <= 66) { startReload(); return; }
     if (gx >= VW - 88 && gx <= VW - 4 && gy >= 40 && gy <= 94) {
       if (gx < VW - 36) { mode = 'bestiary'; bestCur = 0; sfx('menu'); }
       else { mode = 'map'; sfx('menu'); }
       return;
     }
-    const sx0 = (VW - (7 * 28 - 4)) / 2, sy = VH - 34;
-    if (gy >= sy && gy <= sy + 26 && gx >= sx0 && gx <= sx0 + 7 * 28) {
+    const sx0 = (VW - (6 * 28 - 4)) / 2, sy = VH - 34;
+    if (gy >= sy && gy <= sy + 26 && gx >= sx0 && gx <= sx0 + 6 * 28) {
       const si = Math.floor((gx - sx0) / 28);
       if (si === 0) attack();
       else if (si === 1) dodgeRoll();
-      else if (si === 2) useSkill(0);
-      else if (si === 3) useSkill(1);
-      else if (si === 4) drinkPotion();
-      else if (si === 5) useQuickItem();
-      else if (si === 6) cyclePet();
+      else if (si === 2) startReload();
+      else if (si === 3) drinkPotion();
+      else if (si === 4) useQuickItem();
+      else if (si === 5) cyclePet();
     }
   }
 });
@@ -559,7 +554,7 @@ const SEG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('
 const wrapCache = new Map();
 // canvas fonts load lazily: preload both, and re-measure once they arrive so wraps aren't cached at fallback widths
 if (document.fonts) {
-  document.fonts.load(`${8 * US}px "Press Start 2P"`); document.fonts.load(`600 ${10 * US}px "Chakra Petch"`, 'ก');
+  document.fonts.load(`${8 * US}px "Press Start 2P"`); document.fonts.load(`${15 * US}px "Black Ops One"`); document.fonts.load(`600 ${10 * US}px "Chakra Petch"`, 'ก');
   document.fonts.addEventListener('loadingdone', () => wrapCache.clear());
 }
 function wrap(s, n) {
@@ -583,22 +578,48 @@ function shade(c) {
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = c; ctx.fillRect(0, 0, VW, VH); ctx.restore();
   clearText();
 }
-// UI frame: black outline, gold border, bevel highlight and corner studs
-const GOLD = '#d8a848', DIM = '#4a4668';
+// ---- Military UI kit ----
+// panel: an olive-drab steel plate (bevelled frame) around a dark display glass with faint scanlines,
+// with corner brackets in the accent colour. Small panels (slots, portraits) get a full accent rim so
+// the selected / ready state still reads at a glance.
+const GOLD = '#e0c470', DIM = '#3c4430', KHAKI = '#c8c098', OLIVE = ['#7a8a52', '#4a5636', '#232918'];
 function panel(x, y, w, h, border = GOLD, alpha = 0.94) {
   if (alpha > 0.8) clearText(x - 1, y - 1, w + 2, h + 2);   // a solid panel hides any text drawn under it
   ctx.fillStyle = '#000'; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
-  ctx.fillStyle = border; ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = `rgba(14,13,32,${alpha})`; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-  ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fillRect(x + 2, y + 2, w - 4, 1);
-  ctx.fillStyle = border; for (const [cx, cy] of [[x + 2, y + 2], [x + w - 4, y + 2], [x + 2, y + h - 4], [x + w - 4, y + h - 4]]) ctx.fillRect(cx, cy, 2, 2);
+  ctx.fillStyle = OLIVE[1]; ctx.fillRect(x, y, w, h);                                   // steel frame
+  ctx.fillStyle = OLIVE[0]; ctx.fillRect(x, y, w, 1); ctx.fillRect(x, y, 1, h);          // bevel: lit top-left
+  ctx.fillStyle = OLIVE[2]; ctx.fillRect(x, y + h - 1, w, 1); ctx.fillRect(x + w - 1, y, 1, h);
+  ctx.fillStyle = `rgba(11,14,8,${alpha})`; ctx.fillRect(x + 2, y + 2, w - 4, h - 4);   // display glass
+  if (h > 12) { ctx.fillStyle = 'rgba(170,210,120,.035)'; for (let yy = y + 3; yy < y + h - 2; yy += 2) ctx.fillRect(x + 2, yy, w - 4, 1); }
+  ctx.fillStyle = border;
+  if (w <= 44 && h <= 44) {                                                               // slot: full accent rim
+    ctx.fillRect(x + 1, y + 1, w - 2, 1); ctx.fillRect(x + 1, y + h - 2, w - 2, 1); ctx.fillRect(x + 1, y + 1, 1, h - 2); ctx.fillRect(x + w - 2, y + 1, 1, h - 2);
+    return;
+  }
+  const L = Math.min(8, Math.floor(Math.min(w, h) / 3));                                // corner brackets
+  for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1], [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
+    ctx.fillRect(sx > 0 ? cx : cx - L + 1, cy, L, 1); ctx.fillRect(sx > 0 ? cx : cx - L + 1, cy + sy, L, 1);
+    ctx.fillRect(cx, sy > 0 ? cy : cy - L + 1, 1, L); ctx.fillRect(cx + sx, sy > 0 ? cy : cy - L + 1, 1, L);
+  }
+  ctx.fillStyle = '#8a8a78';                                                              // bolt heads
+  for (const [bx, by] of [[x + 3, y + 3], [x + w - 4, y + 3], [x + 3, y + h - 4], [x + w - 4, y + h - 4]]) if (w > 60 && h > 30) ctx.fillRect(bx, by, 1, 1);
 }
+// bar: a segmented gauge with tick marks
 function bar(x, y, w, h, f, c, bg) {
   ctx.fillStyle = '#000'; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
   ctx.fillStyle = bg; ctx.fillRect(x, y, w, h);
   const fw = Math.round(w * clamp(f, 0, 1));
   ctx.fillStyle = c; ctx.fillRect(x, y, fw, h);
-  if (h > 3 && fw > 0) { ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fillRect(x, y, fw, 1); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x, y + h - 1, fw, 1); }
+  if (h > 3 && fw > 0) { ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x, y, fw, 1); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(x, y + h - 1, fw, 1); }
+  if (h >= 5 && w >= 30) { ctx.fillStyle = 'rgba(0,0,0,.5)'; for (let sx = x + 6; sx < x + w; sx += 6) ctx.fillRect(sx, y, 1, h); }
+}
+// yellow/black hazard stripe band (banners)
+function hazard(x, y, w, h) {
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = '#e8b828'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = '#16140c';
+  for (let i = -h; i < w; i += 10) { ctx.beginPath(); ctx.moveTo(x + i, y + h); ctx.lineTo(x + i + 5, y + h); ctx.lineTo(x + i + 5 + h, y); ctx.lineTo(x + i + h, y); ctx.fill(); }
+  ctx.restore();
 }
 function drawSprite(img, x, y, flip) {
   x = Math.round(x) - (img.pad || 0); y = Math.round(y) - (img.pad || 0);
@@ -607,29 +628,57 @@ function drawSprite(img, x, y, flip) {
 }
 const tileHash = (x, y) => ((x * 7919) ^ (y * 104729)) >>> 0;
 
+// Zoomed far out there are thousands of tiles on screen: the ground is then drawn from 16x16-tile chunk images,
+// each repainted only when one of its tiles changes (gates, breaches, repairs...). Animated tiles hold still there.
+const TCH = 16;
+let tileCache = null;
+const animTile = ch => ch === '~' || ch === 'x' || ch === 'm' || ch === 'L' || ch === 'Z' || ch === 'V' || ch === 'p' || ch === '6';
+function drawTilesCached(cx, cy) {
+  if (!tileCache || tileCache.map !== map) tileCache = { map, chunks: new Map() };
+  const S = TCH * T;
+  for (let ky = Math.max(0, Math.floor(cy / S)); ky <= Math.floor((cy + VH) / S) && ky * TCH < MH; ky++)
+    for (let kx = Math.max(0, Math.floor(cx / S)); kx <= Math.floor((cx + VW) / S) && kx * TCH < MW; kx++) {
+      const key = ky * 1000 + kx, x0 = kx * TCH, y0 = ky * TCH, x1 = Math.min(MW, x0 + TCH), y1 = Math.min(MH, y0 + TCH);
+      let c = tileCache.chunks.get(key), dirty = !c;
+      if (!c) { c = { img: mk(S), sig: [] }; tileCache.chunks.set(key, c); }
+      else for (let ty = y0; ty < y1 && !dirty; ty++) for (let tx = x0; tx < x1; tx++) if (c.sig[(ty - y0) * TCH + tx - x0] !== map[ty][tx]) { dirty = true; break; }
+      if (dirty) {
+        const g = c.img.getContext('2d'); g.clearRect(0, 0, S, S);
+        for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) {
+          const ch = map[ty][tx], arr = TILES[ch];
+          g.drawImage(animTile(ch) ? arr[0] : arr[tileHash(tx, ty) % arr.length], (tx - x0) * T, (ty - y0) * T);
+          c.sig[(ty - y0) * TCH + tx - x0] = ch;
+        }
+      }
+      ctx.drawImage(c.img, x0 * T - cx, y0 * T - cy);
+    }
+}
 function drawWorld() {
   const sxOff = shake > 0 ? Math.round((R() - 0.5) * shake * 2) : 0, syOff = shake > 0 ? Math.round((R() - 0.5) * shake * 2) : 0;
   const cx = Math.round(camx) + sxOff, cy = Math.round(camy) + syOff;
   const tx0 = Math.floor(cx / T), ty0 = Math.floor(cy / T);
-  for (let ty = ty0; ty <= ty0 + VH / T + 1; ty++) for (let tx = tx0; tx <= tx0 + VW / T + 1; tx++) {
+  if (VW * VH > 400000) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH); drawTilesCached(cx, cy); }
+  else for (let ty = ty0; ty <= ty0 + VH / T + 1; ty++) for (let tx = tx0; tx <= tx0 + VW / T + 1; tx++) {
     if (tx < 0 || ty < 0 || tx >= MW || ty >= MH) continue;
     const ch = map[ty][tx], arr = TILES[ch];
-    const img = ch === '~' || ch === 'm' || ch === 'L' || ch === 'Z' ? arr[Math.floor((frame + tx * 7) / (ch === '~' || ch === 'm' ? 28 : 8)) % 2] : arr[tileHash(tx, ty) % arr.length];
+    const img = ch === '~' || ch === 'x' || ch === 'm' || ch === 'L' || ch === 'Z' || ch === 'V' || ch === 'p' || ch === '6' ? arr[Math.floor((frame + tx * 7) / (ch === '~' || ch === 'x' || ch === 'm' ? 28 : 8)) % 2] : arr[tileHash(tx, ty) % arr.length];
     ctx.drawImage(img, tx * T - cx, ty * T - cy);
   }
+  if (inWorld()) { drawHelipads(cx, cy); drawMines(cx, cy); drawCraters(cx, cy); drawMountains(cx, cy); drawWallDamage(cx, cy); }   // shell craters (tank.js)   // mountains (mountains.js), cracked walls (invasion.js)                              // the mountain range north of the base (mountains.js)
+  if (inWorld()) { drawCorpses(cx, cy); drawFallenBots(cx, cy); drawBuildFloor(cx, cy); }   // the fallen (recovery.js), wire and traps (build.js)                    // wire and traps lie flat under everyone (build.js)
   for (const pk of pickups) {
     const x = Math.round(pk.x - cx), y = Math.round(pk.y - cy + Math.sin(frame * 0.1 + pk.x) * 1.5);
     if (pk.kind === 'gear' && pk.item.rar >= 2) { ctx.globalAlpha = 0.3 + Math.sin(frame * 0.1) * 0.1; ctx.fillStyle = RAR[pk.item.rar].c; ctx.fillRect(x - 2, y - 44, 4, 40); ctx.globalAlpha = 1; }
-    const icon = pk.kind === 'gold' ? ICON.gold : pk.kind === 'potion' ? ICON.potion : pk.kind === 'mat' || pk.kind === 'use' ? ICON[pk.id] : itemIcon(pk.item);
+    const icon = pk.kind === 'gold' ? ICON.gold : pk.kind === 'scrap' ? ICON.scrap : pk.kind === 'potion' ? ICON.potion : pk.kind === 'mat' || pk.kind === 'use' ? ICON[pk.id] : itemIcon(pk.item);
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x - 5, y + 5, 10, 2);
     ctx.drawImage(icon, x - 8, y - 8);
   }
   // y-sorted actors
   const actors = enemies.filter(e => e.x + e.w > cx - 32 && e.x < cx + VW + 32 && e.y + e.h > cy - 32 && e.y < cy + VH + 32);
-  if (inWorld()) actors.push(...NPCS);
+  if (inWorld()) actors.push(...NPCS, ...TANKS, ...SOLDIERS, ...TOW_TRUCKS, ...MEDICS, ...ENGINEERS, ...HOWITZERS, ...HUMVEES, ...RAID_TANKS, ...BTRS, ...QRFS, ...patrolMenInView(), ...buildsInView(cx, cy));
   const onTitle = !p || mode === 'title' || mode === 'class' || (mode === 'settings' && setFrom === 'title');
   if (inWorld() && !onTitle) actors.push(...bots.filter(b => botAlive(b) && b.x > cx - 32 && b.x < cx + VW + 32 && b.y > cy - 40 && b.y < cy + VH + 32));
-  if (!onTitle && mode !== 'dead') actors.push(p);
+  if (!onTitle && mode !== 'dead' && !spec) actors.push(p);         // the observer has no body (spectator.js)
   actors.sort((a, b) => (a.y + a.h) - (b.y + b.h));
   const shadow = (x, y, w) => {
     x = Math.round(x); y = Math.round(y);
@@ -638,9 +687,20 @@ function drawWorld() {
   };
   const breathe = seed => Math.floor((frame + seed) / 36) % 2;   // 1px idle bob
   for (const a of actors) {
+    if (a.tank) { drawTank(a, cx, cy); continue; }
+    if (a.soldier) { drawSoldier(a, cx, cy); continue; }
+    if (a.structure) { drawStructure(a, cx, cy); continue; }
+    if (a.tow) { drawTowTruck(a, cx, cy); continue; }
+    if (a.medic) { drawMedicTeam(a, cx, cy); continue; }
+    if (a.engineer) { drawEngineer(a, cx, cy); continue; }
+    if (a.howitzer) { drawHowitzer(a, cx, cy); continue; }
+    if (a.humvee) { drawHumvee(a, cx, cy); continue; }
+    if (a.btr) { drawBTR(a, cx, cy); continue; }
     shadow(a.x - cx, a.y + a.h - 3 - cy, a.w);
     if (a.spr) {
       drawSprite(a.spr, a.x - 2 - cx, a.y - 4 - cy + breathe(a.x), !!a.flip);
+      if (a.id === 'outpost_guard')                       // bunker gunner: rifle aimed at its last target
+        drawWeapon('rifle', a.x - 2 - cx + (a.flip ? 3 : 13), a.y - 4 - cy + 12 + breathe(a.x), a.aim || 0, false, { name: a.gun, plus: 0 }, a.fireT > 4);
       const mx = a.x + 6 - cx, my = a.y - 16 - cy;
       if (mode === 'play' && nearNpc() === a) text(a === MERCH ? 'E:TRADE' : 'E:TALK', mx, my, '#f8c838', 'center');
       else if (!onTitle) {
@@ -665,24 +725,20 @@ function drawWorld() {
         drawSprite((p.dir === 'up' ? look.up : look.down)[f], sx - p.rollVx * 1.5, sy - p.rollVy * 1.5, p.dir === 'left');
         ctx.globalAlpha = 1;
       }
-      if (warp) {                                          // spinning / shrinking into the portal
-        const s = warpScale();
-        if (s > 0.05) {
-          const img = look.down[0];
-          ctx.save(); ctx.translate(Math.round(p.x + 6 - cx), Math.round(p.y + 4 - cy)); ctx.rotate(warp.t * 0.35); ctx.scale(s, s);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2); ctx.restore();
-        }
-        continue;
-      }
       const held = swinging ? null : heldPose();
       if (held && held.behind) drawWeapon(held.kind, sx + held.hx, sy + held.hy, held.ang, held.sheathed);
       drawSprite((p.dir === 'up' ? look.up : look.down)[f], sx, sy, p.dir === 'left');
       if (held && !held.behind) drawWeapon(held.kind, sx + held.hx, sy + held.hy, held.ang, held.sheathed);
       if (p.spinT > 0) drawSwing(cx, cy, 1 - p.spinT / 18, true);
       else if (swinging) drawSwing(cx, cy, 1 - p.atkT / SWING, false);
+      if (p.reloadT > 0) {
+        bar(Math.round(p.x - 2 - cx), Math.round(p.y - 9 - cy), 16, 3, 1 - p.reloadT / (p.reloadMax || 48), '#ffd848', '#282010');
+      } else if (!inSafeZone() && p.ammo <= Math.max(1, Math.floor(maxAmmo(p.weapon) * 0.2)) && Math.floor(frame / 18) % 2 === 0) {
+        text('LOW AMMO [R]', Math.round(p.x + 6 - cx), Math.round(p.y - 11 - cy), '#ff6050', 'center');
+      }
       if (p.title && ACHIEVEMENTS[p.title]) {
-        const ach = ACHIEVEMENTS[p.title];
-        text(`[${ach.title}]`, Math.round(p.x + 6 - cx), Math.round(p.y - 14 - cy), ach.color || '#f8e090', 'center');
+        const ach = ACHIEVEMENTS[p.title], tyOff = p.reloadT > 0 ? 19 : 14;
+        text(`[${ach.title}]`, Math.round(p.x + 6 - cx), Math.round(p.y - tyOff - cy), ach.color || '#f8e090', 'center');
       }
       if (p.pet && PET_SPR[p.pet]) {
         const ps = PET_SPR[p.pet][Math.floor(petObj.anim / 12) % 2];
@@ -692,6 +748,11 @@ function drawWorld() {
       }
     } else {
       const e = a, frames = SPR[e.type], img = frames[Math.floor(e.anim / 14) % 2];
+      const nk = nightK();
+      if (nk > 0.2 && !e.d.dummy && !e.d.boss) {                // night frenzy: a red glow under every zombie
+        ctx.fillStyle = `rgba(255,40,30,${(0.22 + Math.sin(frame * 0.15 + e.x) * 0.08) * nk})`;
+        ctx.beginPath(); ctx.ellipse(e.x + e.w / 2 - cx, e.y + e.h - 2 - cy, e.w / 2 + 3, 4, 0, 0, 6.28); ctx.fill();
+      }
       if (e.d.boss) {
         const ac = e.type === 'lich' ? '96,255,144' : e.type === 'frostwyrm' ? '96,224,255' : e.type === 'infernal' ? '255,112,32' : '255,64,48';
         ctx.strokeStyle = `rgba(${ac},${0.32 + Math.sin(frame * 0.1) * 0.15})`; ctx.lineWidth = 1.5;
@@ -712,12 +773,14 @@ function drawWorld() {
       const iw = spriteW(img), ih = spriteH(img);
       const hover = e.type === 'lich' || e.type === 'frostwyrm' ? Math.round(Math.sin(frame * 0.08) * 2) : 0;
       const sx = e.x + e.w / 2 - iw / 2 - cx, sy = e.y + e.h - ih - cy + hover + (e.slam > 0 ? (e.slam % 6 < 3 ? -1 : 1) : 0);
-      drawSprite(e.flash > 0 && e.flash % 4 < 2 ? whiteOf(img) : img, sx, sy, e.face < 0);
+      const body = e.flash > 0 && e.flash % 4 < 2 ? whiteOf(img) : img;
+      if (e.horde && e.swim) drawHordeBody(e, body, sx, sy, iw, ih); else drawSprite(body, sx, sy, e.face < 0);
       if (e.frozen > 0) { ctx.fillStyle = 'rgba(140,200,255,.45)'; ctx.fillRect(Math.round(sx), Math.round(sy), iw, ih); }
       if (e.elite) text('★', Math.round(e.x + e.w / 2 - cx), Math.round(sy - 9), ELITE_MODS[e.elite].c, 'center');
       if (e.hp < e.d.hp && !e.d.boss) bar(Math.round(e.x - cx), Math.round(e.y + e.h - ih - 5 - cy), e.w, 2, e.hp / e.d.hp, '#e04848', '#401010');
     }
   }
+  if (inWorld()) { drawGarageRoof(cx, cy); drawTunnelRoof(cx, cy); }   // garage roof (patrol.js), the west tunnel bore (mountains.js)                  // vehicles inside the motor-pool garage (patrol.js)
   for (const q of parts) { ctx.fillStyle = q.c; ctx.fillRect(Math.round(q.x - cx), Math.round(q.y - cy), 2, 2); }
   const t = p && mode === 'play' ? p.target : null;
   if (t && !t.dead) {                                     // lock-on reticle
@@ -735,7 +798,21 @@ function drawWorld() {
       ctx.fillStyle = '#58d858'; ctx.fillRect(-7, -1, 2, 3); ctx.restore();
     } else if (q.kind === 'bullet') {
       ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(q.vy, q.vx));
-      ctx.fillStyle = '#fff6a0'; ctx.fillRect(-3, 0, 5, 1); ctx.fillStyle = '#ffb020'; ctx.fillRect(-6, 0, 3, 1); ctx.restore();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(1, -0.5, 3, 1);
+      ctx.fillStyle = '#ffe060'; ctx.fillRect(-3, -0.5, 4, 1);
+      ctx.fillStyle = '#ff8810'; ctx.fillRect(-7, 0, 4, 0.8);
+      ctx.restore();
+    } else if (q.kind === 'sniper') {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(q.vy, q.vx));
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, -0.5, 6, 1.5);
+      ctx.fillStyle = '#80e0ff'; ctx.fillRect(-6, -0.5, 6, 1);
+      ctx.fillStyle = '#3090e0'; ctx.fillRect(-13, 0, 7, 0.8);
+      ctx.restore();
+    } else if (q.kind === 'shotgun') {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(q.vy, q.vx));
+      ctx.fillStyle = '#fff4b0'; ctx.fillRect(-1, -1, 3, 2);
+      ctx.fillStyle = '#ff8020'; ctx.fillRect(-3, -0.5, 2, 1);
+      ctx.restore();
     } else if (q.kind === 'bolt') { ctx.fillStyle = '#a080ff'; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, y - 1, 3, 3); }
     else if (q.kind === 'ice') { ctx.fillStyle = '#60e8ff'; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, y - 1, 3, 3); }
     else { const s = frame % 4 < 2 ? 4 : 5; ctx.fillStyle = '#ff6020'; ctx.fillRect(x - s, y - s, s * 2, s * 2); ctx.fillStyle = '#ffd040'; ctx.fillRect(x - 2, y - 2, 5, 5); }
@@ -744,15 +821,17 @@ function drawWorld() {
     ctx.globalAlpha = Math.min(1, r.t / 12); ctx.strokeStyle = r.c; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(r.x - cx, r.y - cy, r.r, 0, 6.28); ctx.stroke(); ctx.globalAlpha = 1;
   }
-  if (inWorld()) drawBotShots(cx, cy);
+  if (inWorld()) { drawBotShots(cx, cy); drawTankShells(cx, cy); drawArtilleryShells(cx, cy); drawRaidAir(cx, cy); drawAirstrikes(cx, cy); }
   for (const q of eprojs) {
     const x = Math.round(q.x - cx), y = Math.round(q.y - cy);
     ctx.fillStyle = q.c; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, y - 1, 2, 2);
   }
+  if (inWorld()) drawBuildCursor(cx, cy);
   if (dungeon || (typeof rift !== 'undefined' && rift)) drawDark(cx, cy);
   if (mode === 'play') {
-    const c = nearChest(), sh = nearShrine(), st = nearStash(), wl = nearWell(), rf = nearRiftPortal();
-    if (c) text('E:OPEN', c[0] * T + 8 - cx, c[1] * T - 10 - cy, '#f8c838', 'center');
+    const c = nearChest(), sh = nearShrine(), st = nearStash(), wl = nearWell(), rf = nearRiftPortal(), gt = nearGate();
+    if (gt) { const gc = gateCenter(gt); text(gt.open ? 'E:CLOSE GATE' : 'E:OPEN GATE', gc.x - cx, gc.y - 18 - cy, gt.open ? '#ff9060' : '#58e858', 'center'); }
+    else if (c) text('E:OPEN', c[0] * T + 8 - cx, c[1] * T - 10 - cy, '#f8c838', 'center');
     else if (sh) text('E:PRAY', sh[0] * T + 8 - cx, sh[1] * T - 10 - cy, '#60f0ff', 'center');
     else if (rf) text('E:ENTER RIFT', rf[0] * T + 8 - cx, rf[1] * T - 10 - cy, '#d080ff', 'center');
     else if (st) text('E:STASH', st[0] * T + 8 - cx, st[1] * T - 10 - cy, '#60c0ff', 'center');
@@ -763,9 +842,9 @@ function drawWorld() {
   if (region) drawRegionFx(cx, cy);
   if (typeof rift !== 'undefined' && rift) drawRiftFx(cx, cy);
   if (inWorld()) drawDayNight(cx, cy);
-  const gloom = !inWorld() ? 0 : clamp((camx + VW / 2 - 46 * T) / (24 * T), 0, 1) * 0.3;
+  const gloom = !inWorld() ? 0 : clamp((camx + VW / 2 - (46 + OX) * T) / (24 * T), 0, 1) * 0.3;
   if (gloom > 0) { ctx.fillStyle = `rgba(16,0,40,${gloom})`; ctx.fillRect(0, 0, VW, VH); }
-  drawWarp(cx, cy);
+  drawWarp();
 }
 
 // crypt darkness: a black layer with soft holes cut around the player, torches and projectiles
@@ -774,17 +853,41 @@ const darkC = mk(); darkC.width = VW; darkC.height = VH;
 // ---- Screen fitting ----
 // Pick a whole-number zoom so the view is roughly 640x360 game pixels on a 1080p window (more world,
 // smaller UI), never less than 320x240, then size the game canvas, the text layer and the darkness layer.
+// mouse-wheel zoom (play and admin observer): a multiplier on the screen scale, remembered in the settings
+const ZOOMS = [0.2, 0.25, 0.33, 0.4, 0.5, 0.625, 0.75, 0.875, 1, 1.25, 1.5, 1.75, 2];
+let zoom = ZOOMS.includes(settings.zoom) ? settings.zoom : 1, zoomT = 0, zoomFit = false;
 function fitScreen() {
   const r = document.getElementById('stage').getBoundingClientRect(), w = Math.max(1, r.width), h = Math.max(1, r.height);
   const fitMax = Math.max(1, Math.floor(Math.min(w / 320, h / 240)));            // biggest zoom that keeps 320x240
-  const scale = clamp(Math.ceil(Math.max(w / 640, h / 400)), 1, fitMax);
-  VW = Math.ceil(w / scale); VH = Math.ceil(h / scale); US = Math.max(2, scale);
+  const base = clamp(Math.ceil(Math.max(w / 640, h / 400)), 1, fitMax);
+  // zoomed in: at least 240x180 game px stay visible while playing; any menu (320x240) drops back to fit (zoomFit).
+  // Zoomed out: as far as the whole world map (below 1 screen px per game px the browser shrinks the picture).
+  const play = mode === 'play'; zoomFit = play;
+  const scale = clamp(base * (play ? zoom : 1), Math.min(1, Math.max(w / (WW * T), h / (WH * T))),
+    Math.max(1, play ? Math.min(w / 240, h / 180) : Math.min(w / 320, h / 240)));
+  VW = Math.ceil(w / scale); VH = Math.ceil(h / scale); US = scale < 1 ? 1 : Math.max(2, Math.ceil(scale));   // keep the text layer small when zoomed far out
   cv.width = VW; cv.height = VH; ctx.imageSmoothingEnabled = false;
   ui.width = VW * US; ui.height = VH * US;
   darkC.width = VW; darkC.height = VH;
   wrapCache.clear();
 }
 addEventListener('resize', fitScreen);
+function setZoom(dir) {
+  const i = clamp(ZOOMS.indexOf(zoom) + dir, 0, ZOOMS.length - 1);
+  if (ZOOMS[i] === zoom) return;
+  const ox = camx + VW / 2, oy = camy + VH / 2;                     // keep the same spot in the middle of the screen
+  const was = zoom, vw = VW;
+  zoom = ZOOMS[i]; fitScreen();
+  if (VW === vw) { zoom = was; fitScreen(); return; }                // already at the limit for this window size
+  camx = clamp(ox - VW / 2, 0, Math.max(0, MW * T - VW)); camy = clamp(oy - VH / 2, 0, Math.max(0, MH * T - VH));
+  zoomT = 90; settings.zoom = zoom;
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+cv.addEventListener('wheel', e => {
+  if (mode !== 'play' || (typeof build !== 'undefined' && build.on)) return;   // in build mode the wheel picks the structure (build.js)
+  e.preventDefault();
+  setZoom(e.deltaY < 0 ? 1 : -1);                                    // wheel up: zoom in
+}, { passive: false });
 // menus are designed in a 320x240 box; this is where that box sits on the current screen
 const menuX = () => Math.floor((VW - 320) / 2), menuY = () => Math.floor((VH - 240) / 2);
 function inMenuBox(fn, y = menuY()) {
@@ -846,6 +949,7 @@ function drawDayNight(cx, cy) {
     ctx.fillStyle = `rgb(${mix(110)},${mix(124)},${mix(190)})`;
     ctx.fillRect(0, 0, VW, VH);
     ctx.globalCompositeOperation = 'source-over';
+    drawBuildLights(cx, cy, k);                               // searchlights cut through the dark (build.js)
     // fireflies in Meadow & Dark Forest at night (drawn after the tint so they glow)
     ctx.fillStyle = '#d8ff70';
     for (let i = 0; i < 22; i++) {
@@ -857,83 +961,34 @@ function drawDayNight(cx, cy) {
   }
 }
 // ---- Weapons in hand ----
-const weaponKind = () => hasGun() ? 'gun' : CLASS_WT[p.cls];          // sword | staff | bow | gun
-const inSafeZone = () => inWorld() && p.x < 26 * T;
+const weaponKind = () => hasGun() ? 'gun' : (p.weapon?.wt || CLASS_WT[p.cls] || 'rifle'); // rifle | sniper | heavy | gun
+const inSafeZone = () => safeAt(p.x, p.y) && !hordeInBase();   // zombies over the wall: weapons out
 const DIR_ANG = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 let wasSheathed = null;
 // where and how the weapon is held right now (offsets are in sprite pixels from the sprite's top-left)
 function heldPose() {
   const kind = weaponKind(), d = p.dir, sheathed = inSafeZone() && p.atkT <= 0;
-  if (sheathed !== wasSheathed) {                                       // draw / sheathe: a ring of metal and a sparkle
-    if (wasSheathed !== null) { sfx(sheathed ? 'sheathe' : 'unsheathe'); burst(p.x + 6, p.y + 8, sheathed ? '#c0c0d0' : '#fff6c0', 6); }
+  if (sheathed !== wasSheathed) {                                       // draw / holstered
+    if (wasSheathed !== null) { sfx(sheathed ? 'sheathe' : 'unsheathe'); burst(p.x + 6, p.y + 8, sheathed ? '#c8c8b0' : '#fff6c0', 6); }
     wasSheathed = sheathed;
   }
   const moving = keys.ArrowLeft || keys.ArrowRight || keys.ArrowUp || keys.ArrowDown || keys.KeyA || keys.KeyD || keys.KeyW || keys.KeyS;
-  const sway = moving ? Math.sin(p.anim * 0.3) * 0.12 : Math.sin(frame * 0.05) * 0.04;   // weapon sways with the steps
+  const sway = moving ? Math.sin(p.anim * 0.3) * 0.12 : Math.sin(frame * 0.05) * 0.04;   // weapon sways with steps
   if (sheathed) {
-    // scabbard on the hip, hilt forward, angled down and back
-    if (kind === 'sword') return { kind, sheathed, behind: d === 'up', hx: d === 'left' ? 11 : 5, hy: 12, ang: (d === 'left' ? 1.35 : 1.8) + sway * 0.5 };
-    return { kind, sheathed, behind: d !== 'up', hx: d === 'left' ? 11 : 5, hy: 9, ang: kind === 'bow' ? Math.PI : -0.9 };   // on the back
+    return { kind, sheathed, behind: d !== 'up', hx: d === 'left' ? 11 : 5, hy: 9, ang: -0.9 };   // slung on back
   }
-  const aiming = p.atkT > 0 && p.aimA !== undefined && kind !== 'sword';
-  const hand = kind === 'sword' ? { down: [13, 12], right: [12, 12], left: [3, 12], up: [3, 11] }[d]
-    : { down: [14, 11], right: [13, 11], left: [2, 11], up: [2, 10] }[d];
-  let ang;
-  if (aiming) ang = p.aimA;
-  // sword: ready stance, blade pointing forward and a little down, beside the body
-  else if (kind === 'sword') ang = { down: 1.1, right: 0.45, left: Math.PI - 0.45, up: -2.2 }[d] + sway;
-  else if (kind === 'staff') ang = d === 'left' ? -1.75 : -1.4;
-  else ang = DIR_ANG[d] + (kind === 'gun' ? 0 : 0.35);
-  const kick = kind === 'gun' && p.atkT > 0 ? -1.5 : 0;               // recoil
+  const aiming = p.atkT > 0 || (p.aimA !== undefined && !inSafeZone());
+  const hand = { down: [14, 11], right: [13, 11], left: [2, 11], up: [2, 10] }[d] || [13, 11];
+  let ang = aiming && p.aimA !== undefined ? p.aimA : (DIR_ANG[d] + sway);
+  const kick = p.atkT > 0 ? -1.8 : 0;
   return { kind, sheathed: false, behind: d === 'up', hx: hand[0] + Math.cos(ang) * kick, hy: hand[1] + Math.sin(ang) * kick, ang };
 }
-// draw a weapon with its grip at (x,y), pointing along ang
-function drawWeapon(kind, x, y, ang, sheathed) {
-  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(ang);
-  const rc = p.weapon ? RAR[p.weapon.rar].c : '#d0d0e0', plus = p.weapon ? p.weapon.plus || 0 : 0;
-  if (!sheathed && plus >= 5) {
-    ctx.globalAlpha = 0.25 + Math.sin(frame * 0.15) * 0.12;
-    ctx.fillStyle = plus >= 9 ? '#ff70ff' : '#ffd848';
-    ctx.fillRect(-2, -4, 17, 9);
-    ctx.globalAlpha = 1;
-  }
-  if (kind === 'sword') {
-    // compact sword sized to the 16px hero: pommel, 2px grip, 5px guard, 8px blade with a tapered tip
-    ctx.fillStyle = '#000'; ctx.fillRect(-4, -2, 6, 4); ctx.fillRect(0, -3, 3, 6); ctx.fillRect(2, -2, 9, 4); ctx.fillRect(11, -1, 2, 2);
-    ctx.fillStyle = '#f8c838'; ctx.fillRect(-3, -1, 1, 2);              // pommel
-    ctx.fillStyle = '#7a4a1c'; ctx.fillRect(-2, -1, 2, 2);              // grip
-    ctx.fillStyle = '#f8c838'; ctx.fillRect(1, -2, 1, 4);               // guard
-    if (sheathed) {
-      ctx.fillStyle = '#5a3418'; ctx.fillRect(2, -1, 9, 2);             // scabbard
-      ctx.fillStyle = '#8a5a2a'; ctx.fillRect(2, -1, 9, 1);
-      ctx.fillStyle = '#f8c838'; ctx.fillRect(10, -1, 1, 2);            // chape
-    } else {
-      ctx.fillStyle = rc; ctx.fillRect(2, -1, 9, 2); ctx.fillRect(11, -1, 1, 1);   // blade + tip
-      ctx.fillStyle = '#fff'; ctx.fillRect(3, -1, 7, 1);                // edge shine
-    }
-  } else if (kind === 'staff') {
-    ctx.fillStyle = '#000'; ctx.fillRect(-6, -2, 20, 4);
-    ctx.fillStyle = '#8a5a2a'; ctx.fillRect(-5, -1, 15, 2);
-    const glow = !sheathed && (p.atkT > 0 || frame % 40 < 20);
-    ctx.fillStyle = '#000'; ctx.fillRect(9, -3, 6, 6);
-    ctx.fillStyle = glow ? '#c080ff' : '#7040a0'; ctx.fillRect(10, -2, 4, 4);
-    ctx.fillStyle = '#fff'; ctx.fillRect(11, -1, 1, 1);
-  } else if (kind === 'bow') {
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(-2, 0, 7, -1.15, 1.15); ctx.stroke();
-    ctx.strokeStyle = '#a0682c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(-2, 0, 7, -1.15, 1.15); ctx.stroke();
-    const pull = !sheathed && p.atkT > 0 ? -3 : 0;                      // string pulls back while shooting
-    ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1; ctx.beginPath();
-    ctx.moveTo(-2 + 7 * Math.cos(1.15), -7 * Math.sin(1.15)); ctx.lineTo(pull, 0); ctx.lineTo(-2 + 7 * Math.cos(1.15), 7 * Math.sin(1.15)); ctx.stroke();
-  } else {                                                              // gun
-    ctx.fillStyle = '#000'; ctx.fillRect(-6, -2, 20, 5); ctx.fillRect(3, 2, 4, 4);
-    ctx.fillStyle = '#7a4a1c'; ctx.fillRect(-5, -1, 4, 3);              // stock
-    ctx.fillStyle = '#4a4a58'; ctx.fillRect(-1, -1, 10, 3); ctx.fillRect(9, 0, 4, 1);   // body + barrel
-    ctx.fillStyle = '#2a2a34'; ctx.fillRect(4, 2, 2, 3);                // mag
-    if (!sheathed && p.atkT > 2) { ctx.fillStyle = '#fff6a0'; ctx.fillRect(13, -1, 3, 3); }   // muzzle flash
-  }
-  ctx.restore();
+// draw a weapon with its grip at (x,y), pointing along ang. The model comes from js/guns.js and is
+// picked by the weapon's name; wpn defaults to the player's weapon, firing to the player's shot timer.
+function drawWeapon(kind, x, y, ang, sheathed, wpn = p.weapon, firing = p.atkT > 1) {
+  drawGun(wpn, kind, x, y, ang, sheathed, firing);
 }
-// knight swing: eased arc with a fading slash trail; spin=true for Whirlwind's full circle
+// combat knife slash / firearm burst arc: eased arc with slash trail
 function drawSwing(cx, cy, t, spin) {
   const e = 1 - (1 - t) ** 3, base = spin || p.aimA === undefined ? DIR_ANG[p.dir] : p.aimA;
   const rev = !spin && p.combo === 1, fin = !spin && p.combo === 2, span = fin ? 2.1 : 1.6;
@@ -950,9 +1005,10 @@ function drawSwing(cx, cy, t, spin) {
     ctx.globalAlpha = 1;
   }
   ctx.restore();
-  drawWeapon('sword', ox + Math.cos(a1) * 9, oy + Math.sin(a1) * 9, a1, false);   // blade tip rides the trail
+  drawWeapon('rifle', ox + Math.cos(a1) * 9, oy + Math.sin(a1) * 9, a1, false);
 }
 function drawHud() {
+  if (spec) { drawSpecHud(); drawHudFeed(VH - 70); return; }      // admin observer: no player panels (spectator.js)
   // player frame: portrait, level, HP / MP / XP
   panel(4, 4, 158, 44, GOLD, 0.85);
   panel(8, 8, 26, 26, DIM);
@@ -965,10 +1021,31 @@ function drawHud() {
   if (p.sp > 0 && Math.floor(frame / 30) % 2 === 0) text(`+${p.sp} SKILL PT [T]`, 39, 38, '#58e858');
   else if (p.title && ACHIEVEMENTS[p.title]) text(`[${ACHIEVEMENTS[p.title].title}]`, 98, 38, ACHIEVEMENTS[p.title].color || GOLD, 'center');
 
+  // Tactical Firearm Ammo & Magazine HUD Panel
+  const mxAmmo = maxAmmo(p.weapon), curAmmo = typeof p.ammo === 'number' ? p.ammo : mxAmmo;
+  const lowAmmo = curAmmo <= Math.max(1, Math.floor(mxAmmo * 0.25));
+  panel(4, 50, 158, 16, p.reloadT > 0 ? '#ffd848' : lowAmmo ? '#ff6050' : GOLD, 0.85);
+  if (p.reloadT > 0) {
+    const rProg = 1 - p.reloadT / (p.reloadMax || 48);
+    bar(8, 54, 62, 8, rProg, '#ffd848', '#2a2210');
+    text('RELOADING...', 157, 54, '#ffd848', 'right');
+  } else {
+    const pips = Math.min(15, mxAmmo), lit = Math.ceil((curAmmo / mxAmmo) * pips);
+    for (let i = 0; i < pips; i++) {
+      const px = 8 + i * 4;
+      ctx.fillStyle = i < lit ? (lowAmmo ? '#ff6050' : '#f8d048') : '#262b1c';
+      ctx.fillRect(px, 55, 2, 6);
+      if (i < lit) { ctx.fillStyle = '#fff6b0'; ctx.fillRect(px, 54, 2, 1); }
+    }
+    text(`AMMO ${curAmmo}/${mxAmmo} [R]`, 157, 54, lowAmmo ? '#ff7060' : '#f0e8c0', 'right');
+  }
+
   // gold + location (top-right)
   panel(VW - 86, 4, 82, 22, GOLD, 0.85);
   ctx.drawImage(ICON.gold, VW - 84, 7); text(String(p.gold), VW - 10, 11, GOLD, 'right');
-  text(zoneName.toUpperCase(), VW - 6, 30, '#b0b0d0', 'right');
+  panel(VW - 152, 4, 64, 22, '#9a9aac', 0.85);                        // scrap for base building
+  ctx.drawImage(ICON.scrap, VW - 150, 7); text(String(p.scrap || 0), VW - 94, 11, '#d0d0e0', 'right');
+  text(zoneName.toUpperCase(), VW - 6, 30, '#c0c0a0', 'right');
 
   // boss bar or Colosseum Wave HUD
   const boss = enemies.find(e => e.d.boss && !e.dead && Math.hypot(e.x - p.x, e.y - p.y) < 250);
@@ -997,28 +1074,30 @@ function drawHud() {
   // minimap (under the gold panel)
   panel(VW - 88, 40, 84, 54, GOLD, 0.9);
   drawMap(VW - 86, 42, 80, 50, (dungeon || (typeof rift !== 'undefined' && rift)) ? 1.5 : 1);
+  drawRadarOverlay(VW - 86, 42, 80, 50);
   const ds = dayState();
-  text(ds.lbl, VW - 84, 84, ds.col);
-  text('Y:TITLES  B  N', VW - 8, 84, '#9090b8', 'right');
+  text(ds.lbl, VW - 8, 43, ds.col, 'right');                           // time of day: top-right corner of the radar
+  if (nightK() > 0.3) text('FRENZY', VW - 8, 53, Math.floor(frame / 20) % 2 ? '#ff4040' : '#ff9090', 'right');   // night frenzy warning
+  text('Y:MEDALS  X  N', VW - 6, 97, '#9a9a78', 'right');              // key hints under the radar
 
   // quest tracker (right)
   const track = [], q = storyQ(), b = p.bounty;
   if (p.sq && q) track.push([`${q.name} ${qProg(q)}/${q.n}`, storyReady()]);
-  if (b) track.push([`Hunt ${PLURAL[b.target]} ${b.prog}/${b.n}`, b.prog >= b.n]);
+  if (b) track.push([`Target: ${PLURAL[b.target]} ${b.prog}/${b.n}`, b.prog >= b.n]);
   if (track.length) {
-    const qy = 100, w = 10 + Math.max(textW('QUESTS'), ...track.map(t => textW(t[0])));
+    const qy = 110, w = 10 + Math.max(textW('OPERATIONS'), ...track.map(t => textW(t[0])));
     panel(VW - 4 - w, qy, w, track.length * 11 + 16, DIM, 0.7);
-    text('QUESTS', VW - w + 2, qy + 4, GOLD);
+    text('OPERATIONS', VW - w + 2, qy + 4, GOLD);
     track.forEach(([s, done], i) => text(s, VW - w + 2, qy + 15 + i * 11, done ? '#58e858' : '#f0e0b0'));
   }
 
-  // action bar (bottom centre): attack, dodge roll, skill 1, skill 2, potion, quick consumable, companion pet
+  // action bar (bottom centre): attack, dodge roll, reload, potion, quick consumable, companion pet
   const qs = quickStack(), qid = qs ? qs.id : (p.quickId || 'mpot');
   const slots = [
-    { key:'SPC', icon: itemIcon(p.weapon || { kind:'weapon', wt: CLASS_WT[p.cls] }), ready: p.cd <= 0, cd: p.cd / 26 },
-    { key:'SHF', tag:'RL', ready: p.rollCd <= 0, cd: p.rollCd / 90 },
-    ...C().skills.map((s, i) => ({ key: i ? 'L' : 'K', tag: s.tag, locked: p.lvl < s.lvl, lockTxt: 'LV' + s.lvl, lv: p.skillLv[i],
-      ready: p.skillCd[i] <= 0 && p.lvl >= s.lvl && p.mp >= s.mp, cd: p.skillCd[i] / s.cd, noMp: p.mp < s.mp })),
+    { key:'SPC', icon: itemIcon(p.weapon || { kind:'weapon', wt: CLASS_WT[p.cls] }), count: p.reloadT > 0 ? 'R' : curAmmo,
+      ready: p.cd <= 0 && p.reloadT <= 0 && curAmmo > 0, cd: p.reloadT > 0 ? p.reloadT / (p.reloadMax || 48) : p.cd / 26 },
+    { key:'SHF', tag:'ROL', ready: p.rollCd <= 0, cd: p.rollCd / (90 * (1 - 0.2 * rank('roll'))) },
+    { key:'R', tag:'RLD', ready: p.reloadT <= 0 && p.ammo < maxAmmo(p.weapon), cd: p.reloadT > 0 ? p.reloadT / (p.reloadMax || 48) : 0 },
     { key:'Q', icon: ICON.potion, count: p.potions, ready: p.potions > 0, cd: 0 },
     { key:'C', icon: ICON[qid], count: qs ? qs.count : 0, ready: !!qs, cd: 0 },
     { key:'V', icon: PET_SPR[p.pet || 'wolf'][0], ready: true, cd: 0 },
@@ -1028,61 +1107,61 @@ function drawHud() {
     const x = sx0 + i * 28;
     panel(x, sy, 24, 24, s.ready ? GOLD : DIM, 0.9);
     if (s.icon) ctx.drawImage(s.icon, x + 4, sy + 4);
-    else text(s.locked ? s.lockTxt : s.tag, x + 12, sy + 8, s.locked ? '#606080' : s.noMp ? '#6080c0' : '#fff', 'center');
+    else text(s.locked ? s.lockTxt : s.tag, x + 12, sy + 8, s.locked ? '#6a6a58' : s.noMp ? '#6080c0' : '#fff', 'center');
     if (s.count !== undefined) text(String(s.count), x + 22, sy + 15, '#fff', 'right');
     if (s.lv > 1 && !s.locked) text(String(s.lv), x + 22, sy + 15, GOLD, 'right');   // skill level
     if (s.cd > 0) { ctx.fillStyle = 'rgba(0,0,0,.6)'; const h = Math.round(22 * clamp(s.cd, 0, 1)); ctx.fillRect(x + 1, sy + 23 - h, 22, h); }
-    text(s.key, x + 12, sy + 26, '#9090b8', 'center');
+    text(s.key, x + 12, sy + 26, '#9a9a78', 'center');
   });
-
-  if (banner) { ctx.globalAlpha = Math.min(1, banner.t / 30); text(banner.txt.toUpperCase(), VW / 2, Math.round(VH * 0.38), '#f0e0b0', 'center', BIG); ctx.globalAlpha = 1; }
-  msgs.forEach((m, i) => { ctx.globalAlpha = Math.min(1, m.t / 40); text(m.txt, 6, VH - 48 - (msgs.length - 1 - i) * 11, m.c); ctx.globalAlpha = 1; });
+  drawHudFeed(VH - 48);
 }
-// shared header for both skill pages: tabs + points
+// sector banner + radio log (shared with the observer HUD)
+function drawHudFeed(logY) {
+  if (banner) {                                                       // banner on a hazard-striped band
+    const a = Math.min(1, banner.t / 30), by = Math.round(VH * 0.38), bw = Math.min(VW, textW(banner.txt.toUpperCase(), BIG) + 60);
+    ctx.globalAlpha = a * 0.92;
+    ctx.fillStyle = 'rgba(10,12,6,.85)'; ctx.fillRect(Math.round(VW / 2 - bw / 2), by - 8, bw, 32);
+    hazard(Math.round(VW / 2 - bw / 2), by - 11, bw, 3); hazard(Math.round(VW / 2 - bw / 2), by + 24, bw, 3);
+    ctx.globalAlpha = a; text(banner.txt.toUpperCase(), VW / 2, by, '#f0e2a8', 'center', BIG); ctx.globalAlpha = 1;
+  }
+  msgs.forEach((m, i) => {                                            // radio log: each line on a dark strip
+    const y = logY - (msgs.length - 1 - i) * 11;
+    ctx.globalAlpha = Math.min(1, m.t / 40);
+    ctx.fillStyle = 'rgba(10,13,7,.62)'; ctx.fillRect(4, y - 2, textW(m.txt) + 12, 11);
+    ctx.fillStyle = m.c; ctx.fillRect(4, y - 2, 2, 11);
+    text(m.txt, 9, y, m.c); ctx.globalAlpha = 1;
+  });
+}
+// radar look over the minimap: green grid, crosshair and a slow sweep
+function drawRadarOverlay(x, y, w, h) {
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = 'rgba(120,255,120,.10)';
+  for (let gx = x + 10; gx < x + w; gx += 10) ctx.fillRect(gx, y, 1, h);
+  for (let gy = y + 10; gy < y + h; gy += 10) ctx.fillRect(x, gy, w, 1);
+  ctx.fillStyle = 'rgba(120,255,120,.22)'; ctx.fillRect(x + (w >> 1), y, 1, h); ctx.fillRect(x, y + (h >> 1), w, 1);
+  const cx = x + w / 2, cy = y + h / 2, a = frame * 0.04, R = Math.hypot(w, h) / 2;
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = `rgba(90,255,110,${0.09 - i * 0.014})`;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a - (i + 1) * 0.09, a - i * 0.09); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  text('RADAR', x + 2, y + 1, 'rgba(150,255,150,.8)');
+}
 function drawSkillHeader() {
   panel(8, 8, 304, 224);
-  [['SKILLS', 14], ['TREE', 72]].forEach(([l, x]) => {
-    const on = (l === 'SKILLS') === (skillTab === 'skills');
-    panel(x, 11, 56, 14, on ? GOLD : DIM); text(l, x + 28, 14, on ? '#fff' : '#8080a0', 'center');
-  });
-  text('TAB', 134, 14, '#9090b8');
-  text(`POINTS ${p.sp}`, 304, 14, p.sp ? '#58e858' : '#808098', 'right');
-}
-function drawSkillsPage() {
-  drawSkillHeader();
-  C().skills.forEach((s, i) => {
-    const x = 16 + i * 148, y = 32, w = 140, lv = p.skillLv[i], sel = i === skillCur, locked = p.lvl < s.lvl;
-    panel(x, y, w, 152, sel ? '#fff' : locked ? DIM : GOLD);
-    text(s.name, x + w / 2, y + 6, locked ? '#808098' : GOLD, 'center');
-    text(i ? 'L' : 'K', x + w - 6, y + 6, '#9090b8', 'right');
-    for (let k = 0; k < SKILL_MAX; k++) {                  // level pips
-      const px = x + w / 2 - SKILL_MAX * 6 + k * 12;
-      ctx.fillStyle = '#000'; ctx.fillRect(px - 1, y + 19, 12, 8);
-      ctx.fillStyle = k < lv && !locked ? GOLD : '#2a2840'; ctx.fillRect(px, y + 20, 10, 6);
-    }
-    text(`LV ${lv}/${SKILL_MAX}`, x + w / 2, y + 31, locked ? '#808098' : '#fff', 'center');
-    wrap(SKILL_DESC[s.name], 16).slice(0, 2).forEach((l, j) => text(l, x + 6, y + 45 + j * 11, '#c0c0d8'));
-    // stats: current value, and the next level's value in green when it changes
-    const now = skillInfo(s, lv), nxt = lv < SKILL_MAX ? skillInfo(s, lv + 1) : null;
-    now.forEach(([k, v], r) => {
-      const yy = y + 72 + r * 19, up = nxt && nxt[r][1] !== v;
-      text(k, x + 6, yy, '#9098c8');
-      text(up ? `${v} > ${nxt[r][1]}` : v, x + w - 6, yy + 8, up ? '#58e858' : '#fff', 'right');
-    });
-  });
-  const why = skillCheck(skillCur);
-  text(why || 'ENTER: UPGRADE (1 SP)', 16, 204, why ? '#ff8080' : '#58e858');
-  text('T: CLOSE', 304, 218, '#9090b8', 'right');
+  text('TACTICAL TRAINING TREE', 16, 14, GOLD);
+  text(`POINTS ${p.sp}`, 304, 14, p.sp ? '#58e858' : '#8a8a70', 'right');
 }
 const SET_Y0 = 50, SET_DY = 15;
 function drawSettings() {
-  shade(setFrom === 'title' ? 'rgba(8,8,24,0.7)' : 'rgba(8,8,24,0.55)');
+  shade(setFrom === 'title' ? 'rgba(6,10,4,0.7)' : 'rgba(6,10,4,0.55)');
   panel(56, 22, 208, 196);
   text('SETTINGS', 160, 30, GOLD, 'center');
   settingsOpts().forEach((o, i) => {
     const y = SET_Y0 + i * SET_DY, sel = i === setCur;
     if (sel) { ctx.fillStyle = 'rgba(216,168,72,.2)'; ctx.fillRect(62, y - 4, 196, SET_DY - 2); }
-    text(o.k, 70, y, sel ? '#fff' : '#a0a8e0');
+    text(o.k, 70, y, sel ? '#fff' : '#b8b890');
     if (o.v !== undefined) {
       const c = o.v === 'OFF' ? '#ff8080' : o.k === 'DIFFICULTY' ? { EASY:'#58e858', NORMAL:'#f0e0b0', HARD:'#ff7050' }[o.v] : '#58e858';
       text(sel ? `< ${tr(o.v)} >` : o.v, 250, y, c, 'right');
@@ -1094,14 +1173,14 @@ function drawSettings() {
 }
 function drawTree() {
   drawSkillHeader();
-  const nodes = treeNodes(p.cls), heads = ['BODY', ...C().skills.map(s => s.name.toUpperCase())];
+  const nodes = treeNodes(p.cls), heads = ['SURVIVAL', 'BALLISTICS', 'TACTICS'];
   heads.forEach((h, c) => text(h, 16 + c * 98 + 46, 32, '#c0c0e0', 'center'));
   for (const n of nodes) {
     const x = 16 + n.col * 98, y = 44 + n.tier * 44, r = rank(n.id), sel = n.col === treeCol && n.tier === treeTier;
     const lvLock = p.lvl < TIER_LVL[n.tier];
     if (n.tier > 0) { ctx.fillStyle = rank(nodes.find(m => m.col === n.col && m.tier === n.tier - 1).id) ? GOLD : DIM; ctx.fillRect(x + 45, y - 10, 2, 10); }
     panel(x, y, 92, 34, sel ? '#fff' : r >= n.max ? GOLD : r > 0 ? '#58a858' : DIM);
-    text(n.name, x + 46, y + 7, lvLock ? '#606080' : r ? '#fff' : '#c0c0d8', 'center');
+    text(n.name, x + 46, y + 7, lvLock ? '#6a6a58' : r ? '#fff' : '#c8c8b0', 'center');
     if (lvLock) text('LV' + TIER_LVL[n.tier], x + 46, y + 20, '#806060', 'center');
     else for (let i = 0; i < n.max; i++) {
       const px = x + 46 - n.max * 5 + i * 10;
@@ -1113,7 +1192,7 @@ function drawTree() {
   text(`${n.name}  ${rank(n.id)}/${n.max}`, 16, 180, GOLD);
   wrap(n.desc, 36).slice(0, 2).forEach((l, i) => text(l, 16, 193 + i * 11, '#e0e0f0'));
   text(why || 'ENTER: LEARN', 16, 218, why ? '#ff8080' : '#58e858');
-  text('T: CLOSE', 304, 218, '#9090b8', 'right');
+  text('T: CLOSE', 304, 218, '#9a9a78', 'right');
 }
 function drawBag(sell) {
   panel(6, 6, 308, 228);
@@ -1139,7 +1218,7 @@ function drawBag(sell) {
       ctx.drawImage(itemIcon(eq), sx + 2, sy + 2);
       if (eq.plus) text('+' + eq.plus, sx + 19, sy + 11, GOLD, 'right');
     }
-    text(SLOT_LBL[slot], sx + 10, sy + 22, sel ? '#fff' : eq ? '#c0c0e0' : '#606080', 'center');
+    text(SLOT_LBL[slot], sx + 10, sy + 22, sel ? '#fff' : eq ? '#c0c0e0' : '#6a6a58', 'center');
   });
   // Right of Paper Doll: quick summary
   text(`${C().name.toUpperCase()} LV${p.lvl}`, 156, 30, GOLD);
@@ -1151,7 +1230,7 @@ function drawBag(sell) {
     text(ACHIEVEMENTS[p.title].bonusDesc, 306, 53, '#58e858', 'right');
   } else {
     text('NO TITLE [Y]', 156, 53, '#707090');
-    text('Titles (Y)', 306, 53, '#9090b8', 'right');
+    text('Titles (Y)', 306, 53, '#9a9a78', 'right');
   }
   text(`ATK ${atk()}  DEF ${def()}  CRT ${Math.round(critRate() * 100)}%  SPD +${Math.round(spdBonus() * 100)}%`, 14, 65, '#d0d0e8');
   ctx.fillStyle = DIM; ctx.fillRect(14, 76, 292, 1);
@@ -1185,9 +1264,9 @@ function drawBag(sell) {
   if (it) {
     for (const l of wrap(itemName(it), 20).slice(0, 2)) { text(l, 134, y, itemColor(it)); y += 11; }
     if (it.kind === 'mat') {
-      text('MONSTER LOOT', 134, y, '#a0a8e0'); y += 13;
-      text('Sell to merchant', 134, y, '#c0c0d0'); y += 11;
-      text('for gold.', 134, y, '#c0c0d0'); y += 13;
+      text('MONSTER LOOT', 134, y, '#b8b890'); y += 13;
+      text('Sell to merchant', 134, y, '#c8c8b0'); y += 11;
+      text('for gold.', 134, y, '#c8c8b0'); y += 13;
     } else if (it.kind === 'use') {
       text('CONSUMABLE', 134, y, '#60c0ff'); y += 12;
       for (const l of wrap(CONSUMABLES[it.id].desc, 20).slice(0, 3)) { text(l, 134, y, '#d0d0e8'); y += 11; }
@@ -1199,7 +1278,8 @@ function drawBag(sell) {
       text(`${pName} +${st}`, 134, y, '#fff');
       if (bagZone === 'bag') text(`(${diff >= 0 ? '+' : ''}${diff})`, 204, y, diff > 0 ? '#58e858' : diff < 0 ? '#ff6060' : '#9090a8');
       y += 11;
-      if (it.kind === 'helm') { text(`MAX HP +${st * 4}`, 134, y, '#ff9090'); y += 10; }
+      if (it.kind === 'weapon') { text(`MAG ${maxAmmo(it)}   RLD ${(reloadFrames(it) / 60).toFixed(1)}s`, 134, y, '#ffd860'); y += 10; }
+      else if (it.kind === 'helm') { text(`MAX HP +${st * 4}`, 134, y, '#ff9090'); y += 10; }
       else if (it.kind === 'boots') { text(`MOVE SPD +${Math.round(Math.min(25, 3 + st))}%`, 134, y, '#7ad858'); y += 10; }
       else if (it.kind === 'ring') { text(`ATK+${Math.ceil(st * 0.6)} MP+${st * 3} CRT+${2 * (it.rar + 1)}%`, 134, y, '#a0d8ff'); y += 10; }
       if (it.aff) for (const a of it.aff) { text(affixText(a), 134, y, AFFIXES[a[0]].c); y += 10; }
@@ -1210,23 +1290,23 @@ function drawBag(sell) {
     const actLbl = sell ? 'SELL' : bagZone === 'eq' ? 'UNEQUIP' : it.kind === 'use' ? 'USE' : isGear(it) ? 'EQUIP' : 'LOOT';
     const canAct = sell ? bagZone === 'bag' : (bagZone === 'eq' || it.kind !== 'mat');
     panel(132, 184, 82, 16, canAct ? GOLD : DIM);
-    text(actLbl, 173, 189, canAct ? '#fff' : '#606080', 'center');
+    text(actLbl, 173, 189, canAct ? '#fff' : '#6a6a58', 'center');
     panel(220, 184, 80, 16, DIM);
-    text(sell ? 'BACK' : bagZone === 'bag' ? 'DROP (X)' : '-', 260, 189, sell || bagZone === 'bag' ? '#ff9090' : '#606080', 'center');
+    text(sell ? 'BACK' : bagZone === 'bag' ? 'DROP (X)' : '-', 260, 189, sell || bagZone === 'bag' ? '#ff9090' : '#6a6a58', 'center');
   } else {
     text(bagZone === 'eq' ? `EMPTY ${SLOT_LBL[GEAR_SLOTS[eqCur]]} SLOT` : '(EMPTY SLOT)', 134, 96, '#707090');
     text('Click or use arrows', 134, 114, '#505070');
     text('to select an item.', 134, 126, '#505070');
     if (sell) { panel(220, 184, 80, 16, DIM); text('BACK', 260, 189, '#ff9090', 'center'); }
   }
-  text(sell ? 'ENT/CLICK:SELL  F:FILTER  R:SORT  ESC:BACK' : 'ENT/CLICK:ACT  X:DROP  F:FILTER  R:SORT', 160, 216, '#9090b8', 'center');
+  text(sell ? 'ENT/CLICK:SELL  F:FILTER  R:SORT  ESC:BACK' : 'ENT/CLICK:ACT  X:DROP  F:FILTER  R:SORT', 160, 216, '#9a9a78', 'center');
 }
 function drawShop() {
   panel(24, 10, 272, 220);
   drawSprite(MERCHANT, 36, 18);
   text('MERCHANT & ANVIL', 160, 18, GOLD, 'center');
   text(`GOLD ${p.gold}G   HP POTIONS ${p.potions}`, 160, 32, '#f0e0b0', 'center');
-  shopOpts().forEach((o, i) => text((i === shopCur ? '> ' : '  ') + o.t, 36, 48 + i * 11, i === shopCur ? '#fff' : '#a0a8e0'));
+  shopOpts().forEach((o, i) => text((i === shopCur ? '> ' : '  ') + o.t, 36, 48 + i * 11, i === shopCur ? '#fff' : '#b8b890'));
   ctx.fillStyle = DIM; ctx.fillRect(34, 174, 252, 1);
   wrap(shopMsg, 30).slice(0, 3).forEach((l, i) => text(l, 36, 180 + i * 11, '#f0e0b0'));
 }
@@ -1249,7 +1329,8 @@ function drawCraft() {
   text(`${RAR[it.rar].tag} ${SLOT_LBL[it.kind]}`, 160, y, RAR[it.rar].c); y += 12;
   const pName = it.kind === 'weapon' ? 'ATK' : it.kind === 'ring' ? 'PWR' : 'DEF';
   text(`${pName} +${it.stat}`, 160, y, '#fff'); y += 11;
-  if (it.kind === 'helm') { text(`MAX HP +${it.stat * 4}`, 160, y, '#ff9090'); y += 10; }
+  if (it.kind === 'weapon') { text(`MAG ${maxAmmo(it)}   RLD ${(reloadFrames(it) / 60).toFixed(1)}s`, 160, y, '#ffd860'); y += 10; }
+  else if (it.kind === 'helm') { text(`MAX HP +${it.stat * 4}`, 160, y, '#ff9090'); y += 10; }
   else if (it.kind === 'boots') { text(`MOVE SPD +${Math.round(Math.min(25, 3 + it.stat))}%`, 160, y, '#7ad858'); y += 10; }
   else if (it.kind === 'ring') { text(`ATK+${Math.ceil(it.stat * 0.6)} MP+${it.stat * 3} CRT+${2 * (it.rar + 1)}%`, 160, y, '#a0d8ff'); y += 10; }
   for (const a of it.aff) { text(affixText(a), 160, y, AFFIXES[a[0]].c); y += 10; }
@@ -1262,8 +1343,8 @@ function drawCraft() {
     y += 14;
   }
   panel(158, 188, 144, 14, ok ? GOLD : DIM);
-  text(`CRAFT (${rec.gold}G)`, 230, 192, ok ? '#fff' : '#606080', 'center');
-  text(shopMsg || 'ENT/CLICK:CRAFT  ESC:BACK', 160, 216, '#9090b8', 'center');
+  text(`CRAFT (${rec.gold}G)`, 230, 192, ok ? '#fff' : '#6a6a58', 'center');
+  text(shopMsg || 'ENT/CLICK:CRAFT  ESC:BACK', 160, 216, '#9a9a78', 'center');
 }
 function drawStash() {
   panel(6, 6, 308, 228);
@@ -1289,7 +1370,7 @@ function drawStash() {
   drawGrid(p.inv, 14, 30, stashZone === 'bag', invCur);
   drawGrid(p.stash, 196, 30, stashZone === 'stash', stashCur);
   text(stashZone === 'bag' ? '>>' : '<<', 160, 62, GOLD, 'center', BIG);
-  text('TAB', 160, 82, '#9090b8', 'center');
+  text('TAB', 160, 82, '#9a9a78', 'center');
   panel(14, 122, 292, 86, DIM);
   const it = stashZone === 'bag' ? p.inv[invCur] : p.stash[stashCur];
   if (it) {
@@ -1299,12 +1380,12 @@ function drawStash() {
       text(`${RAR[it.rar].tag} ${SLOT_LBL[it.kind]}   ${pName} +${st}`, 20, 141, RAR[it.rar].c);
       if (it.aff) it.aff.forEach((a, k) => text(affixText(a), 20, 153 + k * 11, AFFIXES[a[0]].c));
     } else if (it.kind === 'use') text(CONSUMABLES[it.id].desc, 20, 141, '#d0d0e8');
-    else text('MONSTER LOOT', 20, 141, '#a0a8e0');
+    else text('MONSTER LOOT', 20, 141, '#b8b890');
     text(`VALUE ${itemValue(it)}G`, 20, 192, GOLD);
     panel(224, 186, 76, 16, GOLD);
     text(stashZone === 'bag' ? 'STORE' : 'TAKE', 262, 191, '#fff', 'center');
   } else text('(EMPTY SLOT)', 20, 134, '#707090');
-  text('ENT/CLICK:TRANSFER  TAB:SWITCH  ESC:CLOSE', 160, 216, '#9090b8', 'center');
+  text('ENT/CLICK:TRANSFER  TAB:SWITCH  ESC:CLOSE', 160, 216, '#9a9a78', 'center');
 }
 function drawBestiary() {
   panel(6, 6, 308, 228);
@@ -1327,9 +1408,9 @@ function drawBestiary() {
   }
   panel(14, 126, 108, 82, DIM);
   text('HUNTER BONUS', 68, 134, GOLD, 'center');
-  text('Slay 10 foes', 20, 150, '#c0c0d8');
-  text('(or 1 Boss) to', 20, 162, '#c0c0d8');
-  text('unlock Mastery:', 20, 174, '#c0c0d8');
+  text('Slay 10 foes', 20, 150, '#c8c8b0');
+  text('(or 1 Boss) to', 20, 162, '#c8c8b0');
+  text('unlock Mastery:', 20, 174, '#c8c8b0');
   text('+15% DMG vs foe', 20, 190, '#58e858');
 
   panel(128, 34, 178, 174, DIM);
@@ -1340,7 +1421,7 @@ function drawBestiary() {
   ctx.drawImage(spr, 138, 44, 32, 32);
   ctx.globalAlpha = 1;
   text(seen ? d.name : '???', 178, 44, d.boss ? '#ff7070' : GOLD);
-  text(d.boss ? 'BOSS MONSTER' : 'MONSTER', 178, 56, d.boss ? '#ff9090' : '#a0a8e0');
+  text(d.boss ? 'BOSS MONSTER' : 'MONSTER', 178, 56, d.boss ? '#ff9090' : '#b8b890');
   text(`SLAIN: ${kills}`, 178, 68, '#fff');
   const goal = masteryGoal(k);
   text(mast ? '★ MASTERY (+15% DMG)' : `MASTERY: ${kills}/${goal}`, 136, 86, mast ? '#58e858' : '#f8c838');
@@ -1351,10 +1432,10 @@ function drawBestiary() {
   const [matId, rate] = d.drop;
   if (MATS[matId]) {
     ctx.drawImage(ICON[matId], 136, 158);
-    text(`${MATS[matId].name} (${Math.round(rate * 100)}%)`, 156, 162, '#c0c0d8');
+    text(`${MATS[matId].name} (${Math.round(rate * 100)}%)`, 156, 162, '#c8c8b0');
   }
   text(`GEAR DROP: ${Math.round(d.gear * 100)}%`, 136, 184, '#a0d8ff');
-  text('ARROWS/CLICK:SELECT  B/ESC:CLOSE', 160, 216, '#9090b8', 'center');
+  text('ARROWS/CLICK:SELECT  B/ESC:CLOSE', 160, 216, '#9a9a78', 'center');
 }
 function drawAchievements() {
   panel(6, 6, 308, 228);
@@ -1397,9 +1478,9 @@ function drawAchievements() {
     const curAch = ACHIEVEMENTS[p.title];
     text(`[${curAch.title}]`, 66, 146, curAch.color || GOLD, 'center');
     text(curAch.bonusDesc, 66, 161, '#58e858', 'center');
-    text('EQUIPPED BONUS', 66, 178, '#9090b8', 'center');
+    text('EQUIPPED BONUS', 66, 178, '#9a9a78', 'center');
   } else {
-    text('(NO TITLE)', 66, 146, '#606080', 'center');
+    text('(NO TITLE)', 66, 146, '#6a6a58', 'center');
     text('Equip a title to', 66, 161, '#8080a0', 'center');
     text('gain stat bonus', 66, 175, '#8080a0', 'center');
   }
@@ -1412,11 +1493,11 @@ function drawAchievements() {
 
   // Header Badge
   panel(130, 40, 26, 26, isEquipped ? GOLD : isUnlocked ? (ach.color || GOLD) : DIM);
-  text(isUnlocked ? '★' : ach.secret ? '?' : '·', 143, 46, isUnlocked ? (ach.color || GOLD) : '#606080', 'center');
+  text(isUnlocked ? '★' : ach.secret ? '?' : '·', 143, 46, isUnlocked ? (ach.color || GOLD) : '#6a6a58', 'center');
 
   // Name & Secret Tag
   const displayName = ach.secret && !isUnlocked ? '??? (SECRET)' : ach.name;
-  text(displayName, 162, 42, isUnlocked ? GOLD : ach.secret ? '#c080ff' : '#a0a8e0');
+  text(displayName, 162, 42, isUnlocked ? GOLD : ach.secret ? '#c080ff' : '#b8b890');
   text(ach.secret ? 'SECRET ACHIEVEMENT' : 'ACHIEVEMENT', 162, 54, ach.secret ? '#ff70a0' : '#8080a0');
 
   // Divider
@@ -1431,29 +1512,41 @@ function drawAchievements() {
   ctx.fillStyle = '#22244a'; ctx.fillRect(130, 110, 166, 1);
 
   // Title Reward
-  text('TITLE REWARD:', 130, 116, '#9090b8');
-  text(`[${ach.title}]`, 130, 128, isUnlocked ? (ach.color || GOLD) : '#606080');
+  text('TITLE REWARD:', 130, 116, '#9a9a78');
+  text(`[${ach.title}]`, 130, 128, isUnlocked ? (ach.color || GOLD) : '#6a6a58');
 
   // Bonus
-  text('EQUIPPED BONUS:', 130, 144, '#9090b8');
-  text(ach.bonusDesc, 130, 156, isUnlocked ? '#58e858' : '#606080');
+  text('EQUIPPED BONUS:', 130, 144, '#9a9a78');
+  text(ach.bonusDesc, 130, 156, isUnlocked ? '#58e858' : '#6a6a58');
 
   // Action Button
   const btnText = isEquipped ? 'UNEQUIP TITLE' : isUnlocked ? 'EQUIP TITLE' : 'LOCKED';
   panel(130, 184, 166, 18, isEquipped ? '#ff9090' : isUnlocked ? GOLD : DIM);
-  text(btnText, 213, 188, isUnlocked ? '#fff' : '#606080', 'center');
+  text(btnText, 213, 188, isUnlocked ? '#fff' : '#6a6a58', 'center');
 
   // Footer
-  text('ARROWS/CLICK:SELECT  ENT:EQUIP  Y/ESC:CLOSE', 160, 216, '#9090b8', 'center');
+  text('ARROWS/CLICK:SELECT  ENT:EQUIP  Y/ESC:CLOSE', 160, 216, '#9a9a78', 'center');
 }
+// U hides every HUD panel (stats, radar, hotbar, feed, raid/invasion bars) for a clean view of the battlefield
+let hideUI = false, hideUIT = 0;
+function toggleUI() { hideUI = !hideUI; hideUIT = 120; sfx('menu'); }
 function draw() {
+  if ((mode === 'play') !== zoomFit) fitScreen();                   // a menu opened/closed: switch between zoomed and menu-safe sizes
   clearText();
   drawWorld();
+  if (inWorld()) drawImpactMarks(Math.round(camx), Math.round(camy));   // red artillery impact marks, above the night tint (artillery.js)
   const blink = Math.floor(frame / 30) % 2 === 0;
   if ((mode === 'settings' || mode === 'help') && setFrom === 'title' && (mode === 'settings' || helpReturn === 'settings')) return inMenuBox(drawSettings);
-  if (mode === 'title' || mode === 'class') { shade(mode === 'title' ? 'rgba(8,8,24,0.6)' : 'rgba(8,8,24,0.75)'); return inMenuBox(() => drawTitle(blink)); }
-  drawHud();
-  drawRaidHud();
+  if (mode === 'title' || mode === 'class') { shade(mode === 'title' ? 'rgba(6,10,4,0.6)' : 'rgba(6,10,4,0.75)'); return inMenuBox(() => drawTitle(blink)); }
+  if (zoomT > 0 && mode === 'play') { zoomT--; text(`ZOOM ${Math.round(zoom * 100)}%`, VW / 2, VH - 44, '#f8e080', 'center'); }
+  if (hideUI && mode === 'play') {                                   // also hides the admin observer panels (drawHud → drawSpecHud)
+    if (hideUIT > 0) { hideUIT--; text('UI HIDDEN · PRESS U TO SHOW', VW / 2, 6, '#c8c8b0', 'center'); }
+  } else {
+    drawHud();
+    drawRaidHud();
+    drawInvasionHud();
+    drawBuildUI();
+  }
   if (mode === 'dialog') inMenuBox(() => drawDialog(blink), VH - 240);      // dialog box hugs the bottom edge
   else if (mode === 'bag') inMenuBox(() => drawBag(false));
   else if (mode === 'sell') inMenuBox(() => drawBag(true));
@@ -1462,10 +1555,10 @@ function draw() {
   else if (mode === 'stash') inMenuBox(drawStash);
   else if (mode === 'bestiary') inMenuBox(drawBestiary);
   else if (mode === 'achieve') inMenuBox(drawAchievements);
-  else if (mode === 'tree') inMenuBox(skillTab === 'skills' ? drawSkillsPage : drawTree);
+  else if (mode === 'tree') inMenuBox(drawTree);
   else if (mode === 'settings' || (mode === 'help' && helpReturn === 'settings')) inMenuBox(drawSettings);
   else if (mode === 'map') drawWorldMap();
-  else if (mode === 'pause') { shade('rgba(8,8,24,0.6)'); inMenuBox(() => text('PAUSED', 160, 108, '#fff', 'center', BIG)); }
+  else if (mode === 'pause') { shade('rgba(6,10,4,0.6)'); inMenuBox(() => text('PAUSED', 160, 108, '#fff', 'center', BIG)); }
   else if (mode === 'dead') {
     shade('rgba(40,0,0,0.6)');
     inMenuBox(() => {
@@ -1477,30 +1570,34 @@ function draw() {
 }
 function drawTitle(blink) {
   if (mode === 'title') {
-    text('O: SETTINGS', 160, 214, '#9090b8', 'center');
-    text('IRONVALE', 160, 56, '#f8c838', 'center', BIG);
-    text('A PIXEL LOOT RPG', 160, 82, '#a0d8ff', 'center');
-    drawSprite(HEROES[saved?.cls || 'knight'].down[Math.floor(frame / 20) % 2], 152, 104);
+    text('O: SETTINGS', 160, 214, '#9a9a78', 'center');
+    text('V: ADMIN OBSERVER', 160, 192, '#60e0ff', 'center');
+    hazard(40, 40, 240, 3); hazard(40, 76, 240, 3);
+    text('OPERATION: IRONVALE', 160, 52, GOLD, 'center', BIG);
+    text('TACTICAL PIXEL SHOOTER', 160, 86, '#9ad868', 'center');
+    const heroSpr = HEROES[saved?.cls || 'assault'] || HEROES.assault;
+    drawSprite(heroSpr.down[Math.floor(frame / 20) % 2], 152, 104);
     if (saved) {
-      text(`SAVE: LV ${saved.lvl}  ${saved.gold}G`, 160, 132, '#c0c0d0', 'center');
-      if (blink) text('ENTER: CONTINUE', 160, 152, '#fff', 'center');
-      text('N: NEW GAME', 160, 168, '#a0a8e0', 'center');
-    } else if (blink) text('PRESS ENTER', 160, 150, '#fff', 'center');
+      text(`OPERATIVE: LV ${saved.lvl}  ${saved.gold}G`, 160, 132, '#c8c8b0', 'center');
+      if (blink) text('ENTER: CONTINUE OPERATION', 160, 152, '#fff', 'center');
+      text('N: NEW CAMPAIGN', 160, 168, '#b8b890', 'center');
+    } else if (blink) text('PRESS ENTER TO DEPLOY', 160, 150, '#fff', 'center');
     return;
   }
   if (mode === 'class') {
-    text('CHOOSE YOUR CLASS', 160, 18, '#f8c838', 'center');
+    text('CHOOSE YOUR SPECIALIZATION', 160, 18, GOLD, 'center');
     CLASS_KEYS.forEach((k, i) => {
       const c = CLASSES[k], x = 8 + i * 102, sel = i === classCur;
-      panel(x, 36, 98, 180, sel ? '#f8c838' : '#4a4c7c');
-      ctx.drawImage(HEROES[k].down[sel ? Math.floor(frame / 15) % 2 : 0], x + 31, 44, 36, 36);
+      panel(x, 36, 98, 180, sel ? GOLD : DIM);
+      const hSpr = HEROES[k] || HEROES.assault;
+      ctx.drawImage(hSpr.down[sel ? Math.floor(frame / 15) % 2 : 0], x + 31, 44, 36, 36);
       text(c.name.toUpperCase(), x + 49, 86, sel ? '#f8c838' : '#fff', 'center');
-      text(`HP ${c.hp[0] + c.hp[1]}`, x + 8, 102, '#ff8080');
-      text(`MP ${c.mp[0] + c.mp[1]}`, x + 8, 114, '#60c0ff');
-      wrap(c.desc, 10).slice(0, 3).forEach((l, j) => text(l, x + 8, 130 + j * 11, '#c0c0d0'));
-      c.skills.forEach((s, j) => text(s.name, x + 8, 172 + j * 12, '#a0d8ff'));
+      text(`ARMOR ${c.hp[0] + c.hp[1]}`, x + 8, 102, '#ff8080');
+      text(`ENERGY ${c.mp[0] + c.mp[1]}`, x + 8, 114, '#60c0ff');
+      wrap(c.desc, 10).slice(0, 3).forEach((l, j) => text(l, x + 8, 130 + j * 11, '#c8c8b0'));
+      text(`ROLE: ${c.role || CLASS_WT[k].toUpperCase()}`, x + 8, 172, '#a0d8ff');
     });
-    if (blink) text('< >  ENTER: CHOOSE', 160, 224, '#fff', 'center');
+    if (blink) text('< >  ENTER: DEPLOY', 160, 224, '#fff', 'center');
   }
 }
 function drawDialog(blink) {
@@ -1509,7 +1606,7 @@ function drawDialog(blink) {
     panel(8, 150, 304, 84);
     panel(13, 164, 40, 40, DIM);
     ctx.drawImage(d.who.spr, 15, 166, 36, 36);
-    text(d.who.name, 60, 158, '#f8c838');
+    text(d.who.name, 60, 158, GOLD);
     wrap(d.txt, 30).slice(0, 5).forEach((l, i) => text(l, 60, 172 + i * 11, /^(NEW QUEST|BOUNTY|เควสใหม่|ค่าหัว)/.test(l) ? '#58d858' : '#f0e0b0'));
     if (blink) text(dialogQ.length > 1 ? 'NEXT' : 'ENTER', 304, 224, '#f8c838', 'right');
   }
@@ -1522,9 +1619,9 @@ function drawWorldMap() {
     text(dungeon ? `CRYPT  FLOOR ${dungeon}` : region ? MAPS[region].name.toUpperCase() : 'WORLD MAP', VW / 2, y - 12, GOLD, 'center');
     drawMap(x, y, w, h, s);
     const legend = dungeon ? [['#a0e0ff', 'UP'], ['#ff60ff', 'DOWN'], ['#f8c838', 'CHEST'], ['#ff4040', 'FOE']]
-      : region ? [['#ff60ff', 'PORTAL'], ['#ff40ff', 'BOSS'], ['#ff4040', 'FOE'], ['#fff', 'YOU']]
-      : [['#f8f848', 'NPC'], ['#ff60ff', 'PORTAL'], ['#ff4040', 'FOE'], ['#fff', 'YOU']];
-    legend.forEach(([c, l], i) => { const lx = x + i * (w / 4); ctx.fillStyle = c; ctx.fillRect(lx + 2, y + h + 5, 5, 5); text(l, lx + 10, y + h + 4, '#c0c0d8'); });
+      : region ? [['#60ff80', 'CHECKPT'], ['#ff40ff', 'BOSS'], ['#ff4040', 'FOE'], ['#fff', 'YOU']]
+      : [['#f8f848', 'NPC'], ['#60ff80', 'CHECKPT'], ['#ff4040', 'FOE'], ['#fff', 'YOU']];
+    legend.forEach(([c, l], i) => { const lx = x + i * (w / 4); ctx.fillStyle = c; ctx.fillRect(lx + 2, y + h + 5, 5, 5); text(l, lx + 10, y + h + 4, '#c8c8b0'); });
   }
 }
 
@@ -1533,7 +1630,7 @@ fitScreen();
 let last = performance.now(), acc = 0;
 function loop(now) {
   acc += Math.min(100, now - last); last = now;
-  while (acc >= 1000 / 60) { update(); acc -= 1000 / 60; }
+  while (acc >= 1000 / 60) { const n = spec && mode === 'play' && !spec.paused ? spec.speed : 1; for (let i = 0; i < n; i++) update(); acc -= 1000 / 60; }
   draw();
   requestAnimationFrame(loop);
 }
